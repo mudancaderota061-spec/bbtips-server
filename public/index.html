@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BBTips Admin</title>
+  <style>
+    body{margin:0;background:#101820;color:#eaf7ff;font:14px Arial,sans-serif}
+    main{max-width:960px;margin:0 auto;padding:24px}
+    h1{color:#ffd166}
+    input,button,select{padding:10px;margin:4px;background:#06131d;color:#fff;border:1px solid #46e3ff;border-radius:4px}
+    button{background:#0b7189;cursor:pointer;font-weight:bold}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    th,td{border:1px solid #314657;padding:8px;text-align:left}
+    th{background:#1b2b38;color:#9ee7ff}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .bad{color:#ff6b6b}.ok{color:#40ff7b}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>BBTips Admin</h1>
+
+    <section id="login">
+      <h2>Entrar como admin</h2>
+      <input id="adminUser" placeholder="admin">
+      <input id="adminPass" placeholder="senha" type="password">
+      <button id="loginBtn">Entrar</button>
+      <p id="loginMsg" class="bad"></p>
+    </section>
+
+    <section id="panel" hidden>
+      <h2>Criar ou atualizar usuario</h2>
+      <div class="row">
+        <input id="username" placeholder="login do cliente">
+        <input id="password" placeholder="senha do cliente">
+        <input id="expiresAt" type="date" title="vencimento">
+        <input id="note" placeholder="observacao">
+        <select id="active">
+          <option value="true">ativo</option>
+          <option value="false">bloqueado</option>
+        </select>
+        <button id="saveBtn">Salvar usuario</button>
+      </div>
+      <p id="saveMsg"></p>
+
+      <h2>Usuarios</h2>
+      <button id="reloadBtn">Atualizar lista</button>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Login</th>
+            <th>Status</th>
+            <th>Vence</th>
+            <th>Obs</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody id="users"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>

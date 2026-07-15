@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Virtual Pro</title>
+  <link rel="stylesheet" href="/virtual.css">
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">
+      <div class="brand-mark">VP</div>
+      <div>
+        <h1>Virtual Pro</h1>
+        <p>Apenas futebol virtual: padrao, minima, placares e grafico.</p>
+      </div>
+    </div>
+    <form id="loginForm" class="login">
+      <input id="loginUser" autocomplete="username" placeholder="login">
+      <input id="loginPass" autocomplete="current-password" placeholder="senha" type="password">
+      <button type="submit">Entrar</button>
+    </form>
+  </header>
+
+  <main>
+    <section class="book-menu" aria-label="Casas de futebol virtual">
+      <article class="book-column active">
+        <span class="book-chip">bet365</span>
+        <h2>BET365</h2>
+        <button type="button" class="book-action selected" data-platform-button="BET365">Futebol</button>
+        <button type="button" class="book-action">Dia de Partida</button>
+        <button type="button" class="book-action">Futebol legado</button>
+      </article>
+      <article class="book-column">
+        <span class="book-chip orange">betano</span>
+        <h2>BETANO</h2>
+        <button type="button" class="book-action" data-platform-button="BETANO">Futebol</button>
+      </article>
+      <article class="book-column">
+        <span class="book-chip light">BR</span>
+        <h2>BRBET</h2>
+        <button type="button" class="book-action" data-platform-button="BRBET">Kiron</button>
+        <button type="button" class="book-action">Football Studio</button>
+      </article>
+      <article class="book-column">
+        <span class="book-chip blue">sporting</span>
+        <h2>SPORTINGBET</h2>
+        <button type="button" class="book-action" data-platform-button="SPORTINGBET">Futebol</button>
+      </article>
+    </section>
+
+    <section class="multi-filters" aria-label="Multi filtros">
+      <div class="section-title">
+        <span class="filter-icon">F</span>
+        <h2>Multi-filtros</h2>
+        <div class="filter-actions">
+          <button id="refreshBtn" type="button">Atualizar</button>
+          <button id="notifyBtn" type="button">Alertas</button>
+        </div>
+      </div>
+      <div class="filter-grid">
+        <label class="filter-card active">
+          Casa
+          <select id="platform">
+            <option value="BET365">Bet365</option>
+            <option value="BETANO">Betano</option>
+            <option value="BRBET">BRBet</option>
+            <option value="SPORTINGBET">Sportingbet</option>
+          </select>
+        </label>
+        <label class="filter-card active">
+          Over Gols
+          <select id="market">
+            <option value="over25">Over 2.5</option>
+            <option value="over35">Over 3.5</option>
+            <option value="over15">Over 1.5</option>
+            <option value="ambas">Ambas Sim</option>
+            <option value="under25">Under 2.5</option>
+            <option value="under35">Under 3.5</option>
+          </select>
+        </label>
+        <label class="filter-card">
+          Under Gols
+          <select id="underMirror">
+            <option>Selecione</option>
+            <option>Under 2.5</option>
+            <option>Under 3.5</option>
+          </select>
+        </label>
+        <label class="filter-card">
+          Ambas Marcam
+          <select id="ambasMirror">
+            <option>Selecione</option>
+            <option>Ambas Sim</option>
+          </select>
+        </label>
+        <label class="filter-card active">
+          Horas
+          <select id="hours">
+            <option value="Horas3">3 Horas</option>
+            <option value="Horas5">5 Horas</option>
+          </select>
+        </label>
+        <label class="filter-card active">
+          Janela
+          <select id="windowSize">
+            <option value="120">120 jogos</option>
+            <option value="240">240 jogos</option>
+            <option value="480">480 jogos</option>
+          </select>
+        </label>
+        <label class="filter-card">
+          Minima %
+          <input id="minPct" type="number" min="1" max="100" step="1" value="45">
+        </label>
+        <label class="filter-card">
+          Amostra
+          <input id="minSample" type="number" min="3" max="100" step="1" value="8">
+        </label>
+        <label class="filter-card pattern-card">
+          Padrao manual
+          <input id="manualPattern" placeholder="O,U,O ou G,R,R ou 1-1,0-0">
+        </label>
+      </div>
+    </section>
+
+    <section class="statusbar">
+      <span id="sessionStatus">Aguardando login.</span>
+      <span id="dataStatus">Sem dados carregados.</span>
+    </section>
+
+    <nav class="league-tabs" aria-label="Ligas">
+      <button type="button" data-league-tab="1" class="selected">Copa</button>
+      <button type="button" data-league-tab="2">Euro</button>
+      <button type="button" data-league-tab="3">Super</button>
+      <button type="button" data-league-tab="4">Premier</button>
+      <button type="button" data-league-tab="5">Split</button>
+    </nav>
+
+    <section class="panel chart-panel">
+      <div class="trend-head">
+        <h2>Tendencias</h2>
+        <div class="trend-controls">
+          <button type="button" class="mode selected">Mercados</button>
+          <button type="button" class="mode">Times</button>
+          <button type="button" class="mode trader">Modo Trader</button>
+          <select id="chartLeague" aria-label="Liga do grafico"></select>
+        </div>
+      </div>
+      <div id="trendChart" class="trend-chart"></div>
+    </section>
+
+    <section class="layout">
+      <section class="panel pattern-panel">
+        <div class="panel-head">
+          <h2>Detector de ciclos</h2>
+          <span id="patternStatus" class="badge">aguardando</span>
+        </div>
+        <div id="patternStats" class="pattern-stats"></div>
+        <div id="patternRows" class="pattern-rows"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Alertas vivos</h2>
+          <span id="alertCount">0</span>
+        </div>
+        <div id="alerts" class="alerts"></div>
+      </aside>
+
+      <section class="panel board-panel">
+        <div class="panel-head">
+          <h2>Jogos</h2>
+          <select id="boardLeague" aria-label="Liga do quadro"></select>
+        </div>
+        <div id="scoreBoard" class="score-board"></div>
+      </section>
+    </section>
+
+    <section id="leagueCards" class="league-grid" aria-label="Resumo das ligas"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Proximos jogos</h2>
+        <span id="nextCount">0</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Liga</th>
+              <th>Horario</th>
+              <th>Jogo</th>
+              <th>Odd</th>
+              <th>Status</th>
+              <th>Leitura</th>
+            </tr>
+          </thead>
+          <tbody id="nextRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/virtual.js"></script>
+</body>
+</html>

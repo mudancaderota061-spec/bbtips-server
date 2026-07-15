@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: bbtips-virtual
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASS
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bbtips-virtual-db
+          property: connectionString
+
+databases:
+  - name: bbtips-virtual-db
+    plan: free

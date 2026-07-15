@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BBTips Scanner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d141c;
+      --panel: #121d27;
+      --line: #294050;
+      --muted: #8ea6b7;
+      --text: #edf7ff;
+      --cyan: #31d6f4;
+      --green: #34e27a;
+      --yellow: #ffd166;
+      --red: #ff5c6c;
+      --blue: #4d73ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px Arial, sans-serif;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #101a24;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 14px;
+    }
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0 16px 0 0;
+      font-size: 20px;
+      color: #fff;
+    }
+    input, select, button {
+      height: 34px;
+      border: 1px solid #3f6378;
+      border-radius: 4px;
+      background: #08121b;
+      color: #fff;
+      padding: 0 10px;
+      font: inherit;
+    }
+    button {
+      background: #0b7189;
+      border-color: var(--cyan);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.secondary { background: #1c2a35; }
+    main { padding: 12px 14px 24px; }
+    .meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      margin: 8px 0 12px;
+    }
+    .leagues {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .league {
+      border: 1px solid var(--line);
+      border-left-width: 5px;
+      border-radius: 6px;
+      background: var(--panel);
+      padding: 10px;
+      cursor: pointer;
+      min-height: 118px;
+    }
+    .league.active { outline: 2px solid var(--cyan); }
+    .league.enter { border-left-color: var(--green); }
+    .league.watch { border-left-color: var(--yellow); }
+    .league.block { border-left-color: var(--red); }
+    .league.empty { border-left-color: #64788a; }
+    .league h2 {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+    .tag {
+      font-size: 12px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #243542;
+      white-space: nowrap;
+    }
+    .tag.enter { color: var(--green); }
+    .tag.watch { color: var(--yellow); }
+    .tag.block { color: var(--red); }
+    .small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .strong { font-weight: 800; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #0b141d;
+      border: 1px solid var(--line);
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #182734;
+      color: #a9eaff;
+      position: sticky;
+      top: 56px;
+      z-index: 3;
+    }
+    td.num { text-align: right; white-space: nowrap; }
+    .ok { color: var(--green); font-weight: 800; }
+    .warn { color: var(--yellow); font-weight: 800; }
+    .bad { color: var(--red); font-weight: 800; }
+    .muted { color: var(--muted); }
+    .login {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+    @media (max-width: 720px) {
+      th { top: 96px; }
+      .login { margin-left: 0; width: 100%; }
+      .login input, .login button { flex: 1; min-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <h1>BBTips Scanner</h1>
+      <select id="platform" title="Casa de apostas">
+        <option value="BET365">Bet365</option>
+        <option value="PLAYPIX">PlayPix</option>
+        <option value="KIRON">Kiron</option>
+        <option value="SUPERBET">SuperBet</option>
+        <option value="BETANO">Betano</option>
+        <option value="SPORTINGBET">SportingBet</option>
+        <option value="BETFAIR">Betfair</option>
+        <option value="NOVIBET">Novibet</option>
+      </select>
+      <select id="hours" title="Janela de horas">
+        <option value="">Auto</option>
+        <option value="Horas3">3 Horas</option>
+        <option value="Horas5">5 Horas</option>
+      </select>
+      <select id="market">
+        <option value="over15">Over 1.5</option>
+        <option value="under15">Under 1.5</option>
+        <option value="over25" selected>Over 2.5</option>
+        <option value="under25">Under 2.5</option>
+        <option value="ambas_sim">Ambas Sim</option>
+        <option value="ambas_nao">Ambas Nao</option>
+        <option value="over35">Over 3.5</option>
+        <option value="under35">Under 3.5</option>
+        <option value="over5">5+ Gols</option>
+        <option value="casa_vence">Casa Vence</option>
+        <option value="empate">Empate</option>
+        <option value="fora_vence">Visitante Vence</option>
+      </select>
+      <button id="refresh">Atualizar</button>
+      <button id="all" class="secondary">Todas as ligas</button>
+      <div class="login">
+        <input id="user" placeholder="login">
+        <input id="pass" type="password" placeholder="senha">
+        <button id="login">Entrar</button>
+        <button id="logout" class="secondary">Sair</button>
+      </div>
+    </div>
+    <div class="meta">
+      <span id="session">deslogado</span>
+      <span id="last">sem dados</span>
+      <span id="count">0 linhas</span>
+      <span>dados via API do servidor e coletor da extensao</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="leagues" class="leagues"></section>
+    <table>
+      <thead>
+        <tr>
+          <th>Liga</th>
+          <th>Casa</th>
+          <th>Horario</th>
+          <th>Jogo</th>
+          <th>Odd</th>
+          <th>Status</th>
+          <th>Prob / EV</th>
+          <th>Bases</th>
+          <th>Linha</th>
+        </tr>
+      </thead>
+      <tbody id="games"></tbody>
+    </table>
+  </main>
+
+  <script src="scanner.js?v=1.0.36"></script>
+</body>
+</html>
