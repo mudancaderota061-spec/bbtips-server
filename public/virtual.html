@@ -24,6 +24,10 @@
 
   <main>
     <section class="book-menu" aria-label="Casas de futebol virtual">
+      <div class="book-head">
+        <strong>Futebol virtual</strong>
+        <button id="toggleBooks" type="button" class="ghost-btn">Recolher</button>
+      </div>
       <article class="book-column active">
         <span class="book-chip">bet365</span>
         <h2>BET365</h2>
@@ -54,11 +58,12 @@
         <span class="filter-icon">F</span>
         <h2>Multi-filtros</h2>
         <div class="filter-actions">
+          <button id="toggleFilters" type="button">Recolher filtros</button>
           <button id="refreshBtn" type="button">Atualizar</button>
           <button id="notifyBtn" type="button">Alertas</button>
         </div>
       </div>
-      <div class="filter-grid">
+      <div id="filterBody" class="filter-grid">
         <label class="filter-card active">
           Casa
           <select id="platform">
@@ -98,7 +103,10 @@
           Horas
           <select id="hours">
             <option value="Horas3">3 Horas</option>
-            <option value="Horas5">5 Horas</option>
+            <option value="Horas6">6 Horas</option>
+            <option value="Horas12">12 Horas</option>
+            <option value="Horas24">24 Horas</option>
+            <option value="Horas48">48 Horas</option>
           </select>
         </label>
         <label class="filter-card active">
@@ -121,6 +129,28 @@
           Padrao manual
           <input id="manualPattern" placeholder="O,U,O ou G,R,R ou 1-1,0-0">
         </label>
+      </div>
+    </section>
+
+    <section class="collector-panel">
+      <div class="section-title collector-title">
+        <span class="filter-icon">C</span>
+        <div>
+          <h2>Coleta BBTips</h2>
+          <p>Cole aqui a grade copiada do BBTips para alimentar grafico, jogos e padroes quando a API nao enviar dados.</p>
+        </div>
+        <div class="filter-actions">
+          <button id="toggleCollector" type="button">Abrir coleta</button>
+          <button id="pasteImportBtn" type="button">Colar</button>
+        </div>
+      </div>
+      <div id="collectorBody" class="collector-body collapsed">
+        <textarea id="importText" placeholder="Cole aqui o texto copiado da grade do BBTips: times, placares e odds."></textarea>
+        <div class="collector-actions">
+          <button id="importBtn" type="button">Importar grade</button>
+          <button id="clearImportBtn" type="button" class="danger-btn">Limpar importados</button>
+          <span id="importStatus">Nenhuma grade importada.</span>
+        </div>
       </div>
     </section>
 
@@ -171,7 +201,11 @@
       <section class="panel board-panel">
         <div class="panel-head">
           <h2>Jogos</h2>
-          <select id="boardLeague" aria-label="Liga do quadro"></select>
+          <div class="board-actions">
+            <span id="markSummary">sem marcacoes</span>
+            <button id="clearMarksBtn" type="button" class="ghost-btn">Limpar marcas</button>
+            <select id="boardLeague" aria-label="Liga do quadro"></select>
+          </div>
         </div>
         <div id="scoreBoard" class="score-board"></div>
       </section>

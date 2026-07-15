@@ -88,7 +88,7 @@ function normalizeScannerHours(value) {
   const match = String(value || "").match(/(?:Horas)?\s*(\d+)/i);
   if (!match) return null;
   const n = Number(match[1]);
-  return n === 3 || n === 5 ? `Horas${n}` : null;
+  return [3, 5, 6, 12, 24, 48].includes(n) ? `Horas${n}` : null;
 }
 
 function scannerHoursFromUrl(url) {

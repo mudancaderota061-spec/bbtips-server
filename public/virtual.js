@@ -43,10 +43,13 @@ const state = {
   token: localStorage.getItem("virtualProToken") || "",
   username: localStorage.getItem("virtualProUser") || "",
   rows: [],
+  importedRows: JSON.parse(localStorage.getItem("virtualProImportedRows") || "[]"),
   apiErrors: [],
   lastLoadAt: null,
   selectedLeague: Number(localStorage.getItem("virtualProLeague")) || 1,
-  notifyKeys: new Set(JSON.parse(localStorage.getItem("virtualProNotifyKeys") || "[]"))
+  notifyKeys: new Set(JSON.parse(localStorage.getItem("virtualProNotifyKeys") || "[]")),
+  markedTeams: new Set(JSON.parse(localStorage.getItem("virtualProMarkedTeams") || "[]")),
+  markedOdds: new Set(JSON.parse(localStorage.getItem("virtualProMarkedOdds") || "[]"))
 };
 
 const els = {
@@ -62,6 +65,15 @@ const els = {
   manualPattern: document.querySelector("#manualPattern"),
   refreshBtn: document.querySelector("#refreshBtn"),
   notifyBtn: document.querySelector("#notifyBtn"),
+  toggleBooks: document.querySelector("#toggleBooks"),
+  toggleFilters: document.querySelector("#toggleFilters"),
+  toggleCollector: document.querySelector("#toggleCollector"),
+  collectorBody: document.querySelector("#collectorBody"),
+  pasteImportBtn: document.querySelector("#pasteImportBtn"),
+  importText: document.querySelector("#importText"),
+  importBtn: document.querySelector("#importBtn"),
+  clearImportBtn: document.querySelector("#clearImportBtn"),
+  importStatus: document.querySelector("#importStatus"),
   sessionStatus: document.querySelector("#sessionStatus"),
   dataStatus: document.querySelector("#dataStatus"),
   leagueCards: document.querySelector("#leagueCards"),
@@ -74,6 +86,8 @@ const els = {
   trendChart: document.querySelector("#trendChart"),
   boardLeague: document.querySelector("#boardLeague"),
   scoreBoard: document.querySelector("#scoreBoard"),
+  markSummary: document.querySelector("#markSummary"),
+  clearMarksBtn: document.querySelector("#clearMarksBtn"),
   nextRows: document.querySelector("#nextRows"),
   nextCount: document.querySelector("#nextCount"),
   leagueTabs: [...document.querySelectorAll("[data-league-tab]")],
@@ -136,6 +150,82 @@ function rowOdds(row) {
   }
 }
 
+function saveImportedRows() {
+  localStorage.setItem("virtualProImportedRows", JSON.stringify(state.importedRows.slice(-6000)));
+}
+
+function saveMarks() {
+  localStorage.setItem("virtualProMarkedTeams", JSON.stringify([...state.markedTeams]));
+  localStorage.setItem("virtualProMarkedOdds", JSON.stringify([...state.markedOdds]));
+}
+
+function rowKey(row) {
+  const score = rowScore(row);
+  return [
+    String(row?.platform || els.platform.value || "").toUpperCase(),
+    rowLeague(row),
+    rowTime(row),
+    normalizeText(rowName(row)),
+    score ? `${score.a}-${score.b}` : "future",
+    JSON.stringify(rowOdds(row))
+  ].join("|");
+}
+
+function uniqueRows(rows) {
+  const seen = new Set();
+  const out = [];
+  for (const row of rows) {
+    const key = rowKey(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+function allRows() {
+  return uniqueRows([...(state.rows || []), ...(state.importedRows || [])]);
+}
+
+function teamKeys(row) {
+  const name = rowName(row);
+  const parts = name.split(/\s+x\s+/i).map(part => normalizeText(part)).filter(Boolean);
+  return [...new Set([normalizeText(name), ...parts].filter(Boolean))];
+}
+
+function oddKey(odd) {
+  const n = number(odd, 0);
+  return n > 1 ? n.toFixed(2) : "";
+}
+
+function rowIsMarked(row, marketKey = els.market.value) {
+  const teamMarked = teamKeys(row).some(key => state.markedTeams.has(key));
+  const oddMarked = state.markedOdds.has(oddKey(marketOdd(row, marketKey)));
+  return { teamMarked, oddMarked };
+}
+
+function toggleTeamMark(row) {
+  if (!row) return;
+  const keys = teamKeys(row);
+  if (!keys.length) return;
+  const shouldRemove = keys.some(key => state.markedTeams.has(key));
+  keys.forEach(key => {
+    if (shouldRemove) state.markedTeams.delete(key);
+    else state.markedTeams.add(key);
+  });
+  saveMarks();
+  render();
+}
+
+function toggleOddMark(odd) {
+  const key = oddKey(odd);
+  if (!key) return;
+  if (state.markedOdds.has(key)) state.markedOdds.delete(key);
+  else state.markedOdds.add(key);
+  saveMarks();
+  render();
+}
+
 function marketOdd(row, marketKey = els.market.value) {
   const market = MARKETS[marketKey] || MARKETS.over25;
   const odds = rowOdds(row);
@@ -155,7 +245,7 @@ function marketOdd(row, marketKey = els.market.value) {
 
 function splitRows() {
   const validLeagues = new Set(LEAGUES.map(league => league.id));
-  const rows = state.rows.filter(row => validLeagues.has(rowLeague(row)));
+  const rows = allRows().filter(row => validLeagues.has(rowLeague(row)));
   const history = rows.filter(row => rowScore(row));
   const future = rows.filter(row => !rowScore(row) && row?.future !== false && marketOdd(row) > 1);
   return { history, future };
@@ -271,6 +361,96 @@ function parseManualPattern(value) {
       return score ? `${score.a}-${score.b}` : "";
     })
     .filter(Boolean);
+}
+
+function collectOddsFromText(text) {
+  const odds = {};
+  const aliases = {
+    o15: "o15",
+    u15: "u15",
+    o25: "o25",
+    u25: "u25",
+    o35: "o35",
+    u35: "u35",
+    ambs: "ambs",
+    ambas: "ambs",
+    btts: "ambs",
+    ge5: "ge5",
+    ftc: "ftc",
+    fte: "fte",
+    ftv: "ftv"
+  };
+  const re = /\b(o15|u15|o25|u25|o35|u35|ambs|ambas|btts|ge5|ftc|fte|ftv)\s*@?\s*(\d+(?:[,.]\d+)?)/ig;
+  let match;
+  while ((match = re.exec(text))) {
+    const key = aliases[normalizeText(match[1])] || normalizeText(match[1]);
+    const value = number(match[2], 0);
+    if (value > 1) odds[key] = value;
+  }
+  return odds;
+}
+
+function blockFromLooseLines(lines, start) {
+  const out = [];
+  for (let i = start; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (i > start && /\b(o15|u15|o25|u25|o35|u35|ambs|ftc|fte|ftv)\s*@/i.test(lines[i - 1]) && /\b[A-Za-zÀ-ú]{2,}\b/.test(line) && !/@/.test(line)) {
+      break;
+    }
+    out.push(line);
+    if (out.length > 18) break;
+  }
+  return out.join("\n");
+}
+
+function parseImportedText(text) {
+  const liga = number(els.boardLeague.value || els.chartLeague.value || state.selectedLeague, state.selectedLeague);
+  const platform = els.platform.value;
+  const hours = els.hours.value;
+  const cleaned = String(text || "").replace(/\r/g, "\n").replace(/\n{3,}/g, "\n\n");
+  const rawBlocks = cleaned.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
+  const lines = cleaned.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const blocks = rawBlocks.length > 1 ? rawBlocks : lines.map((_, index) => blockFromLooseLines(lines, index));
+  const rows = [];
+  for (const block of blocks) {
+    const odds = collectOddsFromText(block);
+    const hasOdds = Object.keys(odds).length > 0;
+    const score = parseScore(block);
+    const timeMatch = block.match(/\b(\d{1,2}[.:]\d{2})\b/);
+    const time = timeMatch ? timeMatch[1].replace(":", ".") : "";
+    const namedLine = block
+      .split(/\n+/)
+      .map(line => line.trim())
+      .find(line => /\s+x\s+/i.test(line) && !/@/.test(line) && !/\d+\s*[-x]\s*\d+/.test(line));
+    let name = namedLine || "";
+    if (!name) {
+      const compact = block.replace(/\n+/g, " ");
+      const match = compact.match(/([A-Za-zÀ-ú]{2,}(?:\s+[A-Za-zÀ-ú]{2,})?)\s+x\s+([A-Za-zÀ-ú]{2,}(?:\s+[A-Za-zÀ-ú]{2,})?)/i);
+      if (match) name = `${match[1].trim()} x ${match[2].trim()}`;
+    }
+    if (!name && hasOdds) {
+      const labels = block.split(/\n+/).filter(line => !/@/.test(line) && !/\d+\s*[-x]\s*\d+/.test(line) && !/^\d/.test(line));
+      if (labels.length >= 3 && labels[1].toLowerCase() === "x") name = `${labels[0]} x ${labels[2]}`;
+    }
+    if (!name || (!score && !hasOdds)) continue;
+    rows.push({
+      key: `import|${Date.now()}|${rows.length}`,
+      liga,
+      platform,
+      hours,
+      time,
+      name,
+      score,
+      odds,
+      future: !score,
+      source: "import"
+    });
+  }
+  return uniqueRows(rows).filter(row => rowName(row) && (rowScore(row) || scannerRowHasOdds(row)));
+}
+
+function scannerRowHasOdds(row) {
+  return Object.values(rowOdds(row)).some(value => number(value, 0) > 1);
 }
 
 function bestManualPattern(rows, marketKey, manual, minSample, minPctValue) {
@@ -469,20 +649,36 @@ function renderAlerts(alerts) {
   `).join("") : `<article class="alert bad"><h3>Sem alerta forte agora</h3><p>Aguarde minima, padrao ou placar com amostra suficiente.</p></article>`;
 }
 
+function renderMarkSummary() {
+  els.markSummary.textContent = `${state.markedTeams.size} time(s) | ${state.markedOdds.size} odd(s) marcadas`;
+}
+
 function renderBoard(historyRows) {
   const leagueId = number(els.boardLeague.value || state.selectedLeague, LEAGUES[0].id);
   const marketKey = els.market.value;
   const market = MARKETS[marketKey] || MARKETS.over25;
-  const rows = lastRows(rowsForLeague(historyRows, leagueId), 240);
-  els.scoreBoard.innerHTML = rows.slice(-240).map((row, index) => {
+  const rows = lastRows(rowsForLeague(historyRows, leagueId), number(els.windowSize.value, 120));
+  els.scoreBoard.innerHTML = rows.map((row, index) => {
     const score = rowScore(row);
     const good = market.pays(score);
+    const odd = marketOdd(row, marketKey);
+    const marks = rowIsMarked(row, marketKey);
     return `<div class="score-cell ${good ? "green" : "red"}" title="${rowTime(row)} ${rowName(row)}">
       <small class="idx">${index + 1}</small>
       <span>${score ? `${score.a}-${score.b}` : "-"}</span>
+      <span class="teams">${rowName(row)}</span>
+      <small class="odd">${odd ? odd.toFixed(2) : ""}</small>
       <small>${rowTime(row)}</small>
-    </div>`;
+    </div>`.replace("score-cell ", `score-cell ${marks.teamMarked ? "marked " : ""}${marks.oddMarked ? "odd-marked " : ""}`);
   }).join("");
+  els.scoreBoard.querySelectorAll(".score-cell").forEach((cell, index) => {
+    cell.addEventListener("click", event => {
+      const row = rows[index];
+      if (!row) return;
+      if (event.ctrlKey || event.metaKey) toggleOddMark(marketOdd(row, marketKey));
+      else toggleTeamMark(row);
+    });
+  });
 }
 
 function rollingPercent(series, index, size = 8) {
@@ -611,17 +807,28 @@ function renderNextRows(analyses) {
   els.nextRows.innerHTML = rows.length ? rows.map(item => {
     const oddStats = item.oddStats ? `Odd exata ${item.oddStats.hits}/${item.oddStats.total} ${item.oddStats.pct}%` : "Odd sem base exata";
     const pattern = item.analysis.bestPattern ? `Padrao ${item.analysis.bestPattern.rate}% +${item.analysis.bestPattern.step}` : "Padrao sem gatilho";
+    const marks = rowIsMarked(item.row, els.market.value);
     return `
-      <tr>
+      <tr class="${marks.teamMarked ? "marked" : ""} ${marks.oddMarked ? "odd-marked" : ""}">
         <td>${item.league.name}</td>
         <td class="nowrap">${rowTime(item.row)}</td>
         <td>${rowName(item.row)}</td>
         <td>${item.odd ? item.odd.toFixed(2) : "--"}</td>
         <td class="${statusClass(item.status)}">${item.status}<br>Combo ${item.combo}/90</td>
-        <td>${market.label}: base ${item.analysis.stats.hits}/${item.analysis.stats.total} ${item.analysis.stats.pct}%<br>${oddStats}<br>${pattern}</td>
+        <td>
+          <button class="mark-btn" type="button" data-team-index="${rows.indexOf(item)}">${marks.teamMarked ? "Desmarcar time" : "Marcar time"}</button>
+          <button class="mark-btn" type="button" data-odd-index="${rows.indexOf(item)}">${marks.oddMarked ? "Desmarcar odd" : "Marcar odd"}</button><br>
+          ${market.label}: base ${item.analysis.stats.hits}/${item.analysis.stats.total} ${item.analysis.stats.pct}%<br>${oddStats}<br>${pattern}
+        </td>
       </tr>
     `;
   }).join("") : `<tr><td colspan="6">Sem proximos jogos com odd desse mercado.</td></tr>`;
+  els.nextRows.querySelectorAll("[data-team-index]").forEach(button => {
+    button.addEventListener("click", () => toggleTeamMark(rows[number(button.dataset.teamIndex, -1)]?.row));
+  });
+  els.nextRows.querySelectorAll("[data-odd-index]").forEach(button => {
+    button.addEventListener("click", () => toggleOddMark(rows[number(button.dataset.oddIndex, -1)]?.odd));
+  });
 }
 
 function notifyAlerts(alerts) {
@@ -639,6 +846,7 @@ function notifyAlerts(alerts) {
 
 function render() {
   const { history, future } = splitRows();
+  const totalRows = allRows().length;
   for (const league of LEAGUES) {
     if (!els.boardLeague.querySelector(`option[value="${league.id}"]`)) {
       const option = document.createElement("option");
@@ -669,8 +877,11 @@ function render() {
   renderTrendChart(history);
   renderBoard(history);
   renderNextRows(analyses);
+  renderMarkSummary();
+  els.importStatus.textContent = `${state.importedRows.length} linha(s) importadas da grade`;
   if (state.lastLoadAt) {
-    els.dataStatus.textContent = `${state.rows.length} linhas | ${history.length} resultados | ${future.length} proximos | ${state.lastLoadAt.toLocaleTimeString("pt-BR")}`;
+    const errorText = state.apiErrors?.length ? ` | API: ${state.apiErrors.slice(0, 2).join(", ")}` : "";
+    els.dataStatus.textContent = `${totalRows} linhas | ${history.length} resultados | ${future.length} proximos | importados ${state.importedRows.length} | ${state.lastLoadAt.toLocaleTimeString("pt-BR")}${errorText}`;
   }
   notifyAlerts(alerts);
 }
@@ -733,6 +944,62 @@ els.refreshBtn.addEventListener("click", async () => {
   }
 });
 
+els.toggleBooks.addEventListener("click", () => {
+  const menu = document.querySelector(".book-menu");
+  menu.classList.toggle("collapsed");
+  els.toggleBooks.textContent = menu.classList.contains("collapsed") ? "Abrir" : "Recolher";
+});
+
+els.toggleFilters.addEventListener("click", () => {
+  const filters = document.querySelector(".multi-filters");
+  filters.classList.toggle("collapsed");
+  els.toggleFilters.textContent = filters.classList.contains("collapsed") ? "Abrir filtros" : "Recolher filtros";
+});
+
+els.toggleCollector.addEventListener("click", () => {
+  els.collectorBody.classList.toggle("collapsed");
+  els.toggleCollector.textContent = els.collectorBody.classList.contains("collapsed") ? "Abrir coleta" : "Fechar coleta";
+});
+
+els.pasteImportBtn.addEventListener("click", async () => {
+  try {
+    els.collectorBody.classList.remove("collapsed");
+    els.toggleCollector.textContent = "Fechar coleta";
+    els.importText.value = await navigator.clipboard.readText();
+    els.importStatus.textContent = "Texto colado. Clique em Importar grade.";
+  } catch (_error) {
+    els.importStatus.textContent = "Nao consegui ler a area de transferencia. Cole manualmente com Ctrl+V.";
+  }
+});
+
+els.importBtn.addEventListener("click", () => {
+  const rows = parseImportedText(els.importText.value);
+  if (!rows.length) {
+    els.importStatus.textContent = "Nao encontrei jogos/odds no texto colado.";
+    return;
+  }
+  state.importedRows = uniqueRows([...state.importedRows, ...rows]).slice(-6000);
+  saveImportedRows();
+  state.lastLoadAt = new Date();
+  els.importText.value = "";
+  els.importStatus.textContent = `${rows.length} linha(s) importadas.`;
+  render();
+});
+
+els.clearImportBtn.addEventListener("click", () => {
+  state.importedRows = [];
+  saveImportedRows();
+  state.lastLoadAt = new Date();
+  render();
+});
+
+els.clearMarksBtn.addEventListener("click", () => {
+  state.markedTeams.clear();
+  state.markedOdds.clear();
+  saveMarks();
+  render();
+});
+
 els.notifyBtn.addEventListener("click", async () => {
   if (!("Notification" in window)) {
     els.sessionStatus.textContent = "Este navegador nao suporta notificacao.";
@@ -785,6 +1052,8 @@ if (state.token) {
   loadData().catch(error => {
     els.dataStatus.textContent = `Erro: ${error.message}`;
   });
+} else {
+  render();
 }
 
 setInterval(() => {

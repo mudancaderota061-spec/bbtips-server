@@ -129,6 +129,36 @@ main {
   overflow: hidden;
 }
 
+.book-head {
+  align-items: center;
+  background: rgba(7, 13, 19, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.book-menu.collapsed {
+  min-height: 0;
+}
+
+.book-menu.collapsed .book-column {
+  display: none;
+}
+
+.ghost-btn,
+.danger-btn {
+  background: #101720;
+  border-color: #33495d;
+}
+
+.danger-btn {
+  background: #8a1b23;
+  border-color: #ff445d;
+}
+
 .book-column {
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   display: grid;
@@ -273,6 +303,57 @@ main {
 
 .pattern-card {
   grid-column: span 2;
+}
+
+.multi-filters.collapsed #filterBody {
+  display: none;
+}
+
+.collector-panel {
+  background: #101720;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.collector-title p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.collector-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.collector-body.collapsed {
+  display: none;
+}
+
+.collector-body textarea {
+  background: #07131d;
+  border: 1px solid #2dcbef;
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  min-height: 120px;
+  padding: 10px 12px;
+  resize: vertical;
+  width: 100%;
+}
+
+.collector-actions,
+.board-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.collector-actions span,
+.board-actions span {
+  color: var(--muted);
 }
 
 .toolbar label {
@@ -538,7 +619,7 @@ main {
 .score-board {
   display: grid;
   gap: 2px;
-  grid-template-columns: repeat(20, minmax(44px, 1fr));
+  grid-template-columns: repeat(20, minmax(70px, 1fr));
   margin-top: 12px;
   overflow-x: auto;
 }
@@ -554,6 +635,7 @@ main {
   justify-items: center;
   min-width: 48px;
   padding: 4px;
+  position: relative;
 }
 
 .score-cell .idx {
@@ -572,6 +654,48 @@ main {
 .score-cell small {
   color: rgba(255, 255, 255, 0.76);
   font-size: 10px;
+}
+
+.score-cell .teams {
+  display: block;
+  font-size: 10px;
+  line-height: 1.1;
+  max-width: 68px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-cell .odd {
+  color: #d9f6ff;
+  font-size: 10px;
+}
+
+.score-cell.marked {
+  outline: 3px solid var(--yellow);
+  z-index: 1;
+}
+
+.score-cell.odd-marked::after,
+tr.odd-marked td:nth-child(4)::after {
+  color: var(--yellow);
+  content: " alvo";
+  font-size: 11px;
+  font-weight: 900;
+}
+
+tr.marked td {
+  box-shadow: inset 4px 0 0 var(--yellow);
+}
+
+.mark-btn {
+  background: #172537;
+  border-color: #3f5e78;
+  font-size: 12px;
+  margin: 0 6px 6px 0;
+  min-height: 28px;
+  padding: 4px 8px;
 }
 
 .table-wrap {
