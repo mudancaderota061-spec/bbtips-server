@@ -1,5 +1,5 @@
 const SCRIPT_ID = "bbtips-robo-injected-script";
-const API_BASE = "https://bbtips-server-production.up.railway.app";
+const API_BASE = "https://bbtips-server.onrender.com";
 let CHECK_TIMER = null;
 let LAST_BRIDGE_SEND = 0;
 async function bridgeGraphData(message) {
@@ -28,7 +28,7 @@ function injectRemoteConfig(apiBase, token, username) {
 
 async function sendCollectorRows(rows, sentAt, meta = {}) {
   const now = Date.now();
-  if (!Array.isArray(rows) || !rows.length || (!meta.force && now - LAST_BRIDGE_SEND < 35000)) return;
+  if (!Array.isArray(rows) || !rows.length || (!meta.force && now - LAST_BRIDGE_SEND < 25000)) return;
   if (!meta.force) LAST_BRIDGE_SEND = now;
   const res = await chrome.storage.local.get(["bbtips_token", "bbtips_api_base"]);
   const token = res.bbtips_token || "";
@@ -54,7 +54,7 @@ async function sendCollectorRows(rows, sentAt, meta = {}) {
 }
 
 async function loginFromContent(username, password) {
-  const response = await fetch(`${API_BASE}/api/login`, {
+  let response = await fetch(`${API_BASE}/api/login`, {
     method: "POST",
     mode: "cors",
     credentials: "omit",
@@ -64,6 +64,18 @@ async function loginFromContent(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, user: username, password })
   });
+  if (!response.ok) {
+    response = await fetch(`${API_BASE}/api/admin/login`, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "follow",
+      referrerPolicy: "no-referrer",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+  }
   const raw = await response.text();
   let data = {};
   try {
@@ -116,6 +128,7 @@ function removeRobotPanel() {
       clearInterval(window.BBTIPS_INTERCEPTA_API_TIMER);
       clearInterval(window.BBTIPS_PRO_TRADER_TIMER);
       clearInterval(window.BBTIPS_SCANNER_COLLECT_TIMER);
+      clearInterval(window.BBTIPS_API_REFRESH_TIMER);
       clearInterval(window.BBTIPS_ROBO_ALERT_TIMER);
       clearInterval(window.__BBTIPS_GRAPH_ROBO_TIMER);
       clearInterval(window.HB_MULTI_TIMER);

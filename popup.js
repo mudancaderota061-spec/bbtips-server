@@ -1,4 +1,4 @@
-const API_BASE = "https://bbtips-server-production.up.railway.app";
+const API_BASE = "https://bbtips-server.onrender.com";
 
 const loginInput = document.getElementById("login");
 const passwordInput = document.getElementById("password");
@@ -29,6 +29,7 @@ async function injectDirect(tab, type, cfg = {}) {
           clearInterval(window.BBTIPS_INTERCEPTA_API_TIMER);
           clearInterval(window.BBTIPS_PRO_TRADER_TIMER);
           clearInterval(window.BBTIPS_SCANNER_COLLECT_TIMER);
+          clearInterval(window.BBTIPS_API_REFRESH_TIMER);
           clearInterval(window.BBTIPS_ROBO_ALERT_TIMER);
           clearInterval(window.__BBTIPS_GRAPH_ROBO_TIMER);
           clearInterval(window.HB_MULTI_TIMER);

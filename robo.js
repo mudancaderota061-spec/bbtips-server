@@ -8,6 +8,8 @@ const ANCHOR_ALERT_STATE=SEEN+"_ANCHOR_STATE_V2";
 const ANCHOR_ALERT_LOCK=SEEN+"_ANCHOR_LOCK_V2";
 const AGENTE_LOCAL_URL="http://127.0.0.1:8765/ingest";
 let AGENTE_LOCAL_TS=0;
+let AGENTE_LAST_SIGNATURE="";
+let AGENTE_LAST_SEND=0;
 let LAST_HIST_SAVE_TS=0;
 document.getElementById(PANEL)?.remove();
 document.getElementById(PANEL+"-style")?.remove();
@@ -16,8 +18,8 @@ clearInterval(window[TIMER]);
 try{window.__BBTIPS_GRAPH_ROBO_INLINE=false}catch(e){}
 ["bbtips-api-alertas","bbtips-intercepta-api","hb-multi","hb-tips-scanner","bbtips-robo-root","bbtips-robo-canvas","bbtips-robo-desenho","bbtips-marker-handle"].forEach(id=>document.getElementById(id)?.remove());
 
-const CONFIG={market:"over25",tol:0.8,minEV:5,minEdge:3,minProb:0,minOddPct:45,minOddSample:12,minTeamSample:12,maxProximos:6,intervalMs:120000,alertIntervalMs:20000,windows:[120,240,480,960],ligas:[1,2,3,4,5,6],radarLigas:[1,2,3,4],ligaAuto:true,autoRefresh:true,autoApi:false,alerts:true,scannerTelemetry:false,graphRobo:true,horas:"Horas3",filtros:"o15,o25,u25,ambs,ambn,o35,u15,u35,ge5,tgv5,tgc5,ftc,fte,ftv"};
-const LIGA_LABELS={1:"Copa",2:"Euro",3:"Super",4:"Premier",5:"Split",6:"Express"};
+const CONFIG={market:"over25",tol:0.8,minEV:5,minEdge:3,minProb:0,minOddPct:45,minOddSample:12,minTeamSample:12,maxProximos:6,intervalMs:120000,alertIntervalMs:20000,windows:[120,240,480,960],ligas:[1,2,3,4,5],radarLigas:[1,2,3,4,5],ligaAuto:true,autoRefresh:true,autoApi:true,alerts:true,scannerTelemetry:true,graphRobo:true,horas:"Horas3",filtros:"o05,u05,o15,u15,o25,u25,o35,u35,ambs,ambn,ge5,tgv5,tgc5,ftc,fte,ftv"};
+const LIGA_LABELS={1:"Copa",2:"Euro",3:"Super",4:"Premier",5:"Split"};
 const SCHEDULE_TIME_ZONE="Europe/London";
 let PANEL_HOVER=false;
 let SCANNER_GRAPH_AUTO_MIN=false;
@@ -34,6 +36,8 @@ let LAST_API_LOAD=0;
 let SCANNER_COLLECTING=false;
 let RESULT_WINDOWS_CACHE={key:"",rows:null};
 const MARKETS=[
+  {key:"over05",name:"Over 0.5",patterns:[/o05@?(\d+[,.]\d+)/ig,/over\s*0[,.]?5@?(\d+[,.]\d+)/ig],label:/o05|over\s*0/i},
+  {key:"under05",name:"Under 0.5",patterns:[/u05@?(\d+[,.]\d+)/ig,/under\s*0[,.]?5@?(\d+[,.]\d+)/ig],label:/u05|under\s*0/i},
   {key:"ambas_sim",name:"Ambas Sim",patterns:[/ambs@?(\d+[,.]\d+)/ig,/ambas\s*sim@?(\d+[,.]\d+)/ig],label:/ambs|ambas\s*sim|ambas\s*marcam/i},
   {key:"ambas_nao",name:"Ambas Nao",patterns:[/ambn@?(\d+[,.]\d+)/ig,/ambas\s*nao@?(\d+[,.]\d+)/ig],label:/ambn|ambas\s*n/i},
   {key:"over15",name:"Over 1.5",patterns:[/o15@?(\d+[,.]\d+)/ig,/over\s*1[,.]?5@?(\d+[,.]\d+)/ig],label:/o15|over\s*1/i},
@@ -178,6 +182,8 @@ function oddsForMarket(txt,m){
 }
 function marketAliases(m){
   const map={
+    over05:["o05","over05","over_05","odd_over_0.5"],
+    under05:["u05","under05","under_05","odd_under_0.5"],
     ambas_sim:["ambs","ambas_sim","odd_ambas_sim"],
     ambas_nao:["ambn","ambas_nao","odd_ambas_nao"],
     over15:["o15","over15","over_15","odd_over_1.5"],
@@ -658,13 +664,21 @@ function sendAgenteLocal(rows, opts={}){
   const now=Date.now();
   if(!CONFIG.scannerTelemetry&&!opts.force)return;
   const force=!!opts.force;
-  if(!rows.length||(!force&&now-AGENTE_LOCAL_TS<120000))return;
+  if(!rows.length||(!force&&now-AGENTE_LOCAL_TS<30000))return;
+  const sample=[...rows.slice(0,40),...rows.slice(-40)].map(r=>[r.key,r.time,r.score,r.future,r.odds]);
+  const signature=JSON.stringify([rows.length,sample]);
+  if(!force&&signature===AGENTE_LAST_SIGNATURE&&now-AGENTE_LAST_SEND<180000)return;
   if(!force)AGENTE_LOCAL_TS=now;
+  AGENTE_LAST_SIGNATURE=signature;
+  AGENTE_LAST_SEND=now;
   const hours=currentHours();
   const platform=currentPlatform();
+  let bridged=false;
   try{
     window.postMessage({type:"BBTIPS_AGENT_ROWS",source:"bbtips_extension",sentAt:now,platform,hours,force,rows},"*");
+    bridged=true;
   }catch(e){}
+  if(bridged)return;
   try{
     const cfg=window.__BBTIPS_REMOTE_CONFIG||{};
     if(!cfg.apiBase||!cfg.token)return;
@@ -861,7 +875,7 @@ function currentHours(){
       let hit;
       while((hit=re.exec(raw))){
         const n=Number(hit[1]);
-        if(n===3||n===5)return `Horas${n}`;
+        if([3,5,6,12,24,48].includes(n))return `Horas${n}`;
       }
     }
     return null;
@@ -900,8 +914,7 @@ async function carregarApiDireto(opts={}){
   const erros=[];
   const allRows=[];
   try{
-    const ligaAtual=activeLiga();
-    const ligas=ligaAtual?[ligaAtual]:CONFIG.radarLigas;
+    const ligas=CONFIG.radarLigas;
     if(isCarameloPage()){
       for(const liga of ligas){
         const url=carameloApiUrl(liga);
@@ -1389,6 +1402,8 @@ function scoreFromResult(txt){
 }
 function paysMarket(score,m){
   if(!score)return null;
+  if(m.key==="over05")return score.t>=1;
+  if(m.key==="under05")return score.t===0;
   if(m.key==="ambas_sim")return score.a>0&&score.b>0;
   if(m.key==="ambas_nao")return score.a===0||score.b===0;
   if(m.key==="over15")return score.t>=2;
@@ -2467,8 +2482,10 @@ if(CONFIG.autoRefresh){
 }
 if(CONFIG.autoApi){
   setTimeout(()=>carregarApiDireto({silent:true}).catch(()=>{}),5000);
-  window.BBTIPS_SCANNER_COLLECT_TIMER=setInterval(()=>carregarApiDireto({silent:true}).catch(()=>{}),180000);
+  window.BBTIPS_API_REFRESH_TIMER=setInterval(()=>carregarApiDireto({silent:true}).catch(()=>{}),180000);
 }
+setTimeout(()=>sendAgenteLocal(rowsForTelemetry()),10000);
+window.BBTIPS_SCANNER_COLLECT_TIMER=setInterval(()=>sendAgenteLocal(rowsForTelemetry()),30000);
 window.BBTipsRobo={
   analyze,
   config:CONFIG,

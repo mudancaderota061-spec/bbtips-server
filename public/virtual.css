@@ -316,6 +316,34 @@ main {
   padding: 14px;
 }
 
+.collector-panel.automatic {
+  border-left: 4px solid var(--green);
+}
+
+.collector-live {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.collector-live.stale {
+  color: var(--yellow);
+}
+
+.collector-note {
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+#activeMarketLabel {
+  color: var(--green);
+}
+
+[hidden] {
+  display: none !important;
+}
+
 .collector-title p {
   color: var(--muted);
   margin-top: 4px;

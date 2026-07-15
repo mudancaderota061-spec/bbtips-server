@@ -7,6 +7,11 @@ const LEAGUES = [
 ];
 
 const MARKETS = {
+  over05: {
+    label: "Over 0.5",
+    aliases: ["o05", "over05", "over_05", "over0.5", "over 0.5"],
+    pays: score => score && score.t >= 1
+  },
   over15: {
     label: "Over 1.5",
     aliases: ["o15", "over15", "over_15", "over1.5", "over 1.5"],
@@ -22,6 +27,16 @@ const MARKETS = {
     aliases: ["o35", "over35", "over_35", "over3.5", "over 3.5"],
     pays: score => score && score.t >= 4
   },
+  under05: {
+    label: "Under 0.5",
+    aliases: ["u05", "under05", "under_05", "under0.5", "under 0.5"],
+    pays: score => score && score.t === 0
+  },
+  under15: {
+    label: "Under 1.5",
+    aliases: ["u15", "under15", "under_15", "under1.5", "under 1.5"],
+    pays: score => score && score.t <= 1
+  },
   under25: {
     label: "Under 2.5",
     aliases: ["u25", "under25", "under_25", "under2.5", "under 2.5"],
@@ -36,6 +51,11 @@ const MARKETS = {
     label: "Ambas Sim",
     aliases: ["ambs", "ambas", "ambas_sim", "ambas sim", "btts", "btts_yes"],
     pays: score => score && score.a > 0 && score.b > 0
+  },
+  ambasNao: {
+    label: "Ambas Nao",
+    aliases: ["ambn", "ambas_nao", "ambas nao", "btts_no"],
+    pays: score => score && (score.a === 0 || score.b === 0)
   }
 };
 
@@ -46,6 +66,8 @@ const state = {
   importedRows: JSON.parse(localStorage.getItem("virtualProImportedRows") || "[]"),
   apiErrors: [],
   lastLoadAt: null,
+  lastEventAt: null,
+  loading: false,
   selectedLeague: Number(localStorage.getItem("virtualProLeague")) || 1,
   notifyKeys: new Set(JSON.parse(localStorage.getItem("virtualProNotifyKeys") || "[]")),
   markedTeams: new Set(JSON.parse(localStorage.getItem("virtualProMarkedTeams") || "[]")),
@@ -58,6 +80,9 @@ const els = {
   loginPass: document.querySelector("#loginPass"),
   platform: document.querySelector("#platform"),
   market: document.querySelector("#market"),
+  overMarket: document.querySelector("#overMarket"),
+  underMarket: document.querySelector("#underMarket"),
+  ambasMarket: document.querySelector("#ambasMarket"),
   hours: document.querySelector("#hours"),
   windowSize: document.querySelector("#windowSize"),
   minPct: document.querySelector("#minPct"),
@@ -74,6 +99,8 @@ const els = {
   importBtn: document.querySelector("#importBtn"),
   clearImportBtn: document.querySelector("#clearImportBtn"),
   importStatus: document.querySelector("#importStatus"),
+  collectorLiveStatus: document.querySelector("#collectorLiveStatus"),
+  activeMarketLabel: document.querySelector("#activeMarketLabel"),
   sessionStatus: document.querySelector("#sessionStatus"),
   dataStatus: document.querySelector("#dataStatus"),
   leagueCards: document.querySelector("#leagueCards"),
@@ -109,6 +136,30 @@ function normalizeText(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "");
+}
+
+function marketFamily(key) {
+  if (String(key).startsWith("over")) return "over";
+  if (String(key).startsWith("under")) return "under";
+  return "ambas";
+}
+
+function setActiveMarket(key, renderNow = true) {
+  if (!MARKETS[key]) return;
+  els.market.value = key;
+  localStorage.setItem("virtualProMarket", key);
+  const family = marketFamily(key);
+  document.querySelectorAll("[data-market-family]").forEach(card => {
+    card.classList.toggle("active", card.dataset.marketFamily === family);
+  });
+  if (family !== "over") els.overMarket.value = "over25";
+  if (family !== "under") els.underMarket.value = "";
+  if (family !== "ambas") els.ambasMarket.value = "";
+  if (family === "over") els.overMarket.value = key;
+  if (family === "under") els.underMarket.value = key;
+  if (family === "ambas") els.ambasMarket.value = key;
+  if (els.activeMarketLabel) els.activeMarketLabel.textContent = MARKETS[key].label;
+  if (renderNow) render();
 }
 
 function parseScore(value) {
@@ -270,7 +321,7 @@ function patternSymbol(score, marketKey, paid) {
   if (!score) return "";
   if (marketKey.startsWith("over")) return paid ? "O" : "U";
   if (marketKey.startsWith("under")) return paid ? "U" : "O";
-  if (marketKey === "ambas") return paid ? "A" : "N";
+  if (marketKey === "ambas" || marketKey === "ambasNao") return paid ? "A" : "N";
   return paid ? "G" : "R";
 }
 
@@ -878,10 +929,30 @@ function render() {
   renderBoard(history);
   renderNextRows(analyses);
   renderMarkSummary();
-  els.importStatus.textContent = `${state.importedRows.length} linha(s) importadas da grade`;
+  const market = MARKETS[els.market.value] || MARKETS.over25;
+  els.activeMarketLabel.textContent = market.label;
+  const eventAgeSeconds = state.lastEventAt
+    ? Math.max(0, Math.round((Date.now() - state.lastEventAt.getTime()) / 1000))
+    : null;
+  if (eventAgeSeconds !== null) {
+    const live = eventAgeSeconds <= 90;
+    els.collectorLiveStatus.textContent = live
+      ? `AO VIVO · ${eventAgeSeconds}s`
+      : `ultimo envio ${state.lastEventAt.toLocaleTimeString("pt-BR")}`;
+    els.collectorLiveStatus.classList.toggle("stale", !live);
+  } else {
+    els.collectorLiveStatus.textContent = "aguardando extensao";
+    els.collectorLiveStatus.classList.add("stale");
+  }
+  els.importStatus.textContent = state.importedRows.length
+    ? `${state.importedRows.length} linha(s) de emergencia importadas`
+    : "Coleta normal automatica; importacao manual vazia.";
   if (state.lastLoadAt) {
     const errorText = state.apiErrors?.length ? ` | API: ${state.apiErrors.slice(0, 2).join(", ")}` : "";
-    els.dataStatus.textContent = `${totalRows} linhas | ${history.length} resultados | ${future.length} proximos | importados ${state.importedRows.length} | ${state.lastLoadAt.toLocaleTimeString("pt-BR")}${errorText}`;
+    const collectorText = state.lastEventAt
+      ? state.lastEventAt.toLocaleTimeString("pt-BR")
+      : "aguardando";
+    els.dataStatus.textContent = `${totalRows} linhas | ${history.length} resultados | ${future.length} proximos | coletor ${collectorText} | tela ${state.lastLoadAt.toLocaleTimeString("pt-BR")}${errorText}`;
   }
   notifyAlerts(alerts);
 }
@@ -907,23 +978,30 @@ async function loadData() {
     els.sessionStatus.textContent = "Entre com login e senha para carregar.";
     return;
   }
+  if (state.loading) return;
+  state.loading = true;
   els.dataStatus.textContent = "Carregando dados...";
-  const params = new URLSearchParams({
-    platform: els.platform.value,
-    hours: els.hours.value,
-    limit: "1000"
-  });
-  const response = await fetch(`/api/scanner-data?${params}`, {
-    headers: { Authorization: `Bearer ${state.token}` }
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data.ok) {
-    throw new Error(data.error || "falha ao carregar scanner");
+  try {
+    const params = new URLSearchParams({
+      platform: els.platform.value,
+      hours: els.hours.value,
+      limit: "3000"
+    });
+    const response = await fetch(`/api/scanner-data?${params}`, {
+      headers: { Authorization: `Bearer ${state.token}` }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "falha ao carregar scanner");
+    }
+    state.rows = Array.isArray(data.rows) ? data.rows : [];
+    state.apiErrors = Array.isArray(data.apiErrors) ? data.apiErrors : [];
+    state.lastEventAt = data.lastEventAt ? new Date(data.lastEventAt) : null;
+    state.lastLoadAt = new Date();
+    render();
+  } finally {
+    state.loading = false;
   }
-  state.rows = Array.isArray(data.rows) ? data.rows : [];
-  state.apiErrors = Array.isArray(data.apiErrors) ? data.apiErrors : [];
-  state.lastLoadAt = new Date();
-  render();
 }
 
 els.loginForm.addEventListener("submit", async event => {
@@ -958,13 +1036,13 @@ els.toggleFilters.addEventListener("click", () => {
 
 els.toggleCollector.addEventListener("click", () => {
   els.collectorBody.classList.toggle("collapsed");
-  els.toggleCollector.textContent = els.collectorBody.classList.contains("collapsed") ? "Abrir coleta" : "Fechar coleta";
+  els.toggleCollector.textContent = els.collectorBody.classList.contains("collapsed") ? "Diagnostico" : "Fechar diagnostico";
 });
 
 els.pasteImportBtn.addEventListener("click", async () => {
   try {
     els.collectorBody.classList.remove("collapsed");
-    els.toggleCollector.textContent = "Fechar coleta";
+    els.toggleCollector.textContent = "Fechar diagnostico";
     els.importText.value = await navigator.clipboard.readText();
     els.importStatus.textContent = "Texto colado. Clique em Importar grade.";
   } catch (_error) {
@@ -1009,9 +1087,17 @@ els.notifyBtn.addEventListener("click", async () => {
   els.sessionStatus.textContent = permission === "granted" ? "Alertas do navegador ligados." : "Alertas do navegador bloqueados.";
 });
 
-["platform", "market", "hours", "windowSize", "minPct", "minSample", "manualPattern", "boardLeague", "chartLeague"].forEach(id => {
+["platform", "hours", "windowSize", "minPct", "minSample", "manualPattern", "boardLeague", "chartLeague"].forEach(id => {
   els[id].addEventListener("change", render);
   els[id].addEventListener("input", render);
+});
+
+els.overMarket.addEventListener("change", () => setActiveMarket(els.overMarket.value));
+els.underMarket.addEventListener("change", () => {
+  if (els.underMarket.value) setActiveMarket(els.underMarket.value);
+});
+els.ambasMarket.addEventListener("change", () => {
+  if (els.ambasMarket.value) setActiveMarket(els.ambasMarket.value);
 });
 
 els.leagueTabs.forEach(button => {
@@ -1046,6 +1132,7 @@ els.chartLeague.addEventListener("change", () => {
   els.boardLeague.value = String(state.selectedLeague);
 });
 
+setActiveMarket(localStorage.getItem("virtualProMarket") || "over25", false);
 if (state.username) els.loginUser.value = state.username;
 if (state.token) {
   els.sessionStatus.textContent = `token salvo: ${state.username || "usuario"}`;
@@ -1057,5 +1144,8 @@ if (state.token) {
 }
 
 setInterval(() => {
-  if (state.token) loadData().catch(() => {});
-}, 60000);
+  if (!state.token || state.loading) return;
+  loadData().catch(error => {
+    els.dataStatus.textContent = `Atualizacao automatica: ${error.message}`;
+  });
+}, 20000);

@@ -5,7 +5,7 @@ const GRAPH_DATA_URLS = {
   4: "https://www.caramelotips.com.br/final/premier.json",
   5: "https://www.caramelotips.com.br/final/split.json"
 };
-const API_BASE = "https://bbtips-server-production.up.railway.app";
+const API_BASE = "https://bbtips-server.onrender.com";
 
 const graphDataCache = new Map();
 
@@ -23,7 +23,7 @@ async function fetchGraphData(liga) {
 }
 
 async function loginUser(username, password) {
-  const response = await fetch(`${API_BASE}/api/login`, {
+  let response = await fetch(`${API_BASE}/api/login`, {
     method: "POST",
     mode: "cors",
     credentials: "omit",
@@ -33,6 +33,18 @@ async function loginUser(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, user: username, password })
   });
+  if (!response.ok) {
+    response = await fetch(`${API_BASE}/api/admin/login`, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "follow",
+      referrerPolicy: "no-referrer",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+  }
   const raw = await response.text();
   let data = {};
   try {

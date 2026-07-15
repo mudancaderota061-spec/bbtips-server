@@ -64,6 +64,7 @@
         </div>
       </div>
       <div id="filterBody" class="filter-grid">
+        <input id="market" type="hidden" value="over25">
         <label class="filter-card active">
           Casa
           <select id="platform">
@@ -73,30 +74,31 @@
             <option value="SPORTINGBET">Sportingbet</option>
           </select>
         </label>
-        <label class="filter-card active">
+        <label class="filter-card active" data-market-family="over">
           Over Gols
-          <select id="market">
-            <option value="over25">Over 2.5</option>
-            <option value="over35">Over 3.5</option>
+          <select id="overMarket">
+            <option value="over05">Over 0.5</option>
             <option value="over15">Over 1.5</option>
-            <option value="ambas">Ambas Sim</option>
+            <option value="over25" selected>Over 2.5</option>
+            <option value="over35">Over 3.5</option>
+          </select>
+        </label>
+        <label class="filter-card" data-market-family="under">
+          Under Gols
+          <select id="underMarket">
+            <option value="">Selecione</option>
+            <option value="under05">Under 0.5</option>
+            <option value="under15">Under 1.5</option>
             <option value="under25">Under 2.5</option>
             <option value="under35">Under 3.5</option>
           </select>
         </label>
-        <label class="filter-card">
-          Under Gols
-          <select id="underMirror">
-            <option>Selecione</option>
-            <option>Under 2.5</option>
-            <option>Under 3.5</option>
-          </select>
-        </label>
-        <label class="filter-card">
+        <label class="filter-card" data-market-family="ambas">
           Ambas Marcam
-          <select id="ambasMirror">
-            <option>Selecione</option>
-            <option>Ambas Sim</option>
+          <select id="ambasMarket">
+            <option value="">Selecione</option>
+            <option value="ambas">Sim</option>
+            <option value="ambasNao">Nao</option>
           </select>
         </label>
         <label class="filter-card active">
@@ -132,20 +134,22 @@
       </div>
     </section>
 
-    <section class="collector-panel">
+    <section class="collector-panel automatic">
       <div class="section-title collector-title">
         <span class="filter-icon">C</span>
         <div>
-          <h2>Coleta BBTips</h2>
-          <p>Cole aqui a grade copiada do BBTips para alimentar grafico, jogos e padroes quando a API nao enviar dados.</p>
+          <h2>Coleta automatica BBTips</h2>
+          <p>A extensao le a API e a grade dentro da pagina logada e envia as cinco ligas automaticamente.</p>
         </div>
+        <strong id="collectorLiveStatus" class="collector-live">aguardando extensao</strong>
         <div class="filter-actions">
-          <button id="toggleCollector" type="button">Abrir coleta</button>
-          <button id="pasteImportBtn" type="button">Colar</button>
+          <button id="toggleCollector" type="button">Diagnostico</button>
+          <button id="pasteImportBtn" type="button" hidden>Colar</button>
         </div>
       </div>
       <div id="collectorBody" class="collector-body collapsed">
-        <textarea id="importText" placeholder="Cole aqui o texto copiado da grade do BBTips: times, placares e odds."></textarea>
+        <p class="collector-note">Reserva de emergencia. A coleta normal nao precisa de print nem copiar e colar.</p>
+        <textarea id="importText" placeholder="Importacao de emergencia"></textarea>
         <div class="collector-actions">
           <button id="importBtn" type="button">Importar grade</button>
           <button id="clearImportBtn" type="button" class="danger-btn">Limpar importados</button>
@@ -169,7 +173,10 @@
 
     <section class="panel chart-panel">
       <div class="trend-head">
-        <h2>Tendencias</h2>
+        <div>
+          <h2>Tendencias</h2>
+          <p>Mercado ativo: <strong id="activeMarketLabel">Over 2.5</strong></p>
+        </div>
         <div class="trend-controls">
           <button type="button" class="mode selected">Mercados</button>
           <button type="button" class="mode">Times</button>

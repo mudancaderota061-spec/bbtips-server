@@ -100,7 +100,7 @@ function scannerHoursFromUrl(url) {
 }
 
 function scannerApiUrl(liga, futuro, platform = "BET365", hours = "Horas3") {
-  const filtros = "o15,o25,u25,ambs,ambn,o35,u35,ge5,tgv5,tgc5,ftc,fte,ftv";
+  const filtros = "o05,u05,o15,u15,o25,u25,o35,u35,ambs,ambn,ge5,tgv5,tgc5,ftc,fte,ftv";
   const params = new URLSearchParams({
     liga: String(liga),
     futuro: futuro ? "true" : "false",
@@ -302,7 +302,7 @@ async function fetchScannerApiRows(platform = "BET365", hours = "Horas3") {
   const cacheKey = String(platform || "BET365").toUpperCase();
   const hoursKey = normalizeScannerHours(hours) || "Horas3";
   const cached = scannerApiCache.get(`${cacheKey}|${hoursKey}`);
-  if (cached && now - cached.at < 20000 && cached.rows.length) return cached;
+  if (cached && now - cached.at < 60000) return cached;
   const rows = [];
   const errors = [];
   const ligas = [1, 2, 3, 4, 5];
@@ -411,7 +411,8 @@ app.post("/api/telemetry", requireUserOrAdmin, async (req, res) => {
 });
 
 app.get("/api/scanner-data", requireUserOrAdmin, async (req, res) => {
-  const limit = Math.max(1, Math.min(1000, Number(req.query.limit) || 480));
+  const limit = Math.max(1, Math.min(5000, Number(req.query.limit) || 3000));
+  const telemetryEventLimit = 12;
   const username = req.auth.type === "admin" && req.query.user ? String(req.query.user) : req.auth.username;
   const rawPlatform = String(req.query.platform || "BET365").replace(/[^a-z0-9_-]/ig, "").toUpperCase();
   const platform = rawPlatform === "TODAS" ? "BET365" : rawPlatform || "BET365";
@@ -423,7 +424,7 @@ app.get("/api/scanner-data", requireUserOrAdmin, async (req, res) => {
       and ($1::text is null or username = $1)
     order by id desc
     limit $2
-  `, [username || null, limit]);
+  `, [username || null, telemetryEventLimit]);
   let telemetryScope = "usuario";
   if (!telemetry.rows.length) {
     telemetry = await pool.query(`
@@ -432,7 +433,7 @@ app.get("/api/scanner-data", requireUserOrAdmin, async (req, res) => {
       where kind = 'collector_rows'
       order by id desc
       limit $1
-    `, [limit]);
+    `, [telemetryEventLimit]);
     telemetryScope = telemetry.rows.length ? "ultima_coleta" : "vazio";
   }
   const recentHours = requestedHours || telemetry.rows
@@ -558,9 +559,9 @@ app.get("/api/scanner-data", requireUserOrAdmin, async (req, res) => {
         collectedAt: item.created_at,
         username: item.username
       });
-      if (out.length >= 5000) break;
+      if (out.length >= limit) break;
     }
-    if (out.length >= 5000) break;
+    if (out.length >= limit) break;
   }
 
   res.json({

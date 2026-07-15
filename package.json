@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "node tests/graph-native.test.cjs && node tests/graph-bridge.test.cjs"
+    "test": "node tests/graph-native.test.cjs && node tests/graph-bridge.test.cjs && node tests/automatic-collector.test.cjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
