@@ -564,6 +564,7 @@ function readGridRowsForTelemetry(anchor=null){
   document.querySelectorAll("table").forEach(table=>{
     const rows=[...table.querySelectorAll("tr")];
     const minuteByCol=fillMinuteByCol(rows);
+    if(Object.keys(minuteByCol).length<6)return;
     rows.forEach(tr=>{
       const cells=[...tr.children];
       const hourInfo=rowHourInfo(cells);
@@ -572,8 +573,29 @@ function readGridRowsForTelemetry(anchor=null){
       cells.forEach((cell,i)=>{
         if(i<=hourIndex||minuteByCol[i]===undefined)return;
         const txt=cell.innerText||"";
-        if(!/\s+x\s+/i.test(txt)||hasResult(txt))return;
         const time=`${hour}.${String(minuteByCol[i]).padStart(2,"0")}`;
+        const score=scoreFromResult(txt);
+        if(score){
+          const key=["dom-history",platform,liga||"auto",time,`${score.a}-${score.b}`].join("|");
+          if(seen.has(key))return;
+          seen.add(key);
+          out.push({
+            key,
+            liga,
+            time,
+            name:`Resultado ${time}`,
+            score,
+            odds:{},
+            future:false,
+            platform,
+            hours,
+            api:"dom-grid-history",
+            idx:i,
+            txt:String(txt).slice(0,160)
+          });
+          return;
+        }
+        if(!/\s+x\s+/i.test(txt))return;
         if(!isScheduleFuture(time,futureAnchor))return;
         const name=gameName(txt);
         const odds=oddsObjectFromText(txt);
@@ -664,7 +686,7 @@ function sendAgenteLocal(rows, opts={}){
   const now=Date.now();
   if(!CONFIG.scannerTelemetry&&!opts.force)return;
   const force=!!opts.force;
-  if(!rows.length||(!force&&now-AGENTE_LOCAL_TS<30000))return;
+  if(!force&&now-AGENTE_LOCAL_TS<30000)return;
   const sample=[...rows.slice(0,40),...rows.slice(-40)].map(r=>[r.key,r.time,r.score,r.future,r.odds]);
   const signature=JSON.stringify([rows.length,sample]);
   if(!force&&signature===AGENTE_LAST_SIGNATURE&&now-AGENTE_LAST_SEND<180000)return;

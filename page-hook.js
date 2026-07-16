@@ -5,9 +5,11 @@
   const interesting = value => /api\.thtips\.com\.br|futebolvirtual|\/final\//i.test(String(value || ""));
   const remember = (url, text) => {
     if (!interesting(url) && !/"(?:Linhas|linhas|table)"\s*:/i.test(String(text || "").slice(0, 1200))) return;
+    const normalizedUrl = String(url || "");
     const queue = Array.isArray(window.__BBTIPS_CAPTURED_API) ? window.__BBTIPS_CAPTURED_API : [];
-    queue.push({ url: String(url || ""), text: String(text || ""), capturedAt: Date.now() });
-    window.__BBTIPS_CAPTURED_API = queue.slice(-24);
+    const withoutOlderCopy = queue.filter(item => String(item?.url || "") !== normalizedUrl);
+    withoutOlderCopy.push({ url: normalizedUrl, text: String(text || ""), capturedAt: Date.now() });
+    window.__BBTIPS_CAPTURED_API = withoutOlderCopy.slice(-8);
     window.dispatchEvent(new CustomEvent("bbtips-api-captured"));
   };
 

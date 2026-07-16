@@ -45,7 +45,7 @@ function injectRemoteConfig(apiBase, token, username) {
 
 async function sendCollectorRows(rows, sentAt, meta = {}) {
   const now = Date.now();
-  if (!Array.isArray(rows) || !rows.length || (!meta.force && now - LAST_BRIDGE_SEND < 25000)) return;
+  if (!Array.isArray(rows) || (!meta.force && now - LAST_BRIDGE_SEND < 25000)) return;
   if (!meta.force) LAST_BRIDGE_SEND = now;
   const res = await chrome.storage.local.get(["bbtips_token", "bbtips_api_base"]);
   const token = res.bbtips_token || "";

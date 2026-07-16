@@ -14,12 +14,14 @@ const html = read("public/virtual.html");
 const app = read("public/virtual.js");
 const server = read("src/server.js");
 
-assert.equal(manifest.version, "1.0.84");
+assert.equal(manifest.version, "1.0.85");
 assert.ok(manifest.host_permissions.includes("https://bbtips-server.onrender.com/*"));
 assert.equal(manifest.content_scripts[0].run_at, "document_start");
 assert.ok(manifest.web_accessible_resources[0].resources.includes("page-hook.js"));
 assert.match(content, /injectEarlyApiHook\(\)/);
+assert.doesNotMatch(content, /!rows\.length \|\| \(!meta\.force/);
 assert.match(pageHook, /__BBTIPS_CAPTURED_API/);
+assert.match(pageHook, /withoutOlderCopy\.slice\(-8\)/);
 assert.match(pageHook, /bbtips-api-captured/);
 
 for (const file of ["content.js", "background.js", "popup.js"]) {
@@ -36,6 +38,9 @@ assert.match(robot, /scannerTelemetry:true/);
 assert.match(robot, /const ligas=CONFIG\.radarLigas/);
 assert.match(robot, /BBTIPS_SCANNER_COLLECT_TIMER=setInterval\(\(\)=>sendAgenteLocal\(rowsForTelemetry\(\)\),30000\)/);
 assert.doesNotMatch(robot, /BBTIPS_SCANNER_COLLECT_TIMER=setInterval\(\(\)=>sendAgenteLocal\(rowsForTelemetry\(\),\{force:true\}\),30000\)/);
+assert.match(robot, /api:"dom-grid-history"/);
+assert.match(robot, /name:`Resultado \$\{time\}`/);
+assert.doesNotMatch(robot, /if\(!rows\.length\|\|\(!force&&now-AGENTE_LOCAL_TS<30000\)\)return/);
 
 assert.match(html, /id="overMarket"/);
 assert.match(html, /id="underMarket"/);
