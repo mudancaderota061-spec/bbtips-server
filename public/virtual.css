@@ -84,6 +84,77 @@ h2 {
   gap: 10px;
 }
 
+.account-status {
+  align-items: center;
+  background: #09261a;
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  display: flex;
+  gap: 10px;
+  min-height: 48px;
+  padding: 7px 8px 7px 12px;
+}
+
+.account-status-dot {
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(21, 233, 121, 0.14);
+  height: 10px;
+  width: 10px;
+}
+
+.account-status strong {
+  color: var(--green);
+  display: block;
+  font-size: 14px;
+}
+
+.account-status small {
+  color: #b9d8c7;
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.logout-btn {
+  background: transparent;
+  border-color: #4d705f;
+  min-height: 32px;
+  padding: 5px 10px;
+}
+
+.login-toast {
+  background: #0b3322;
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #eafff3;
+  font-size: 15px;
+  font-weight: 800;
+  left: 50%;
+  max-width: calc(100vw - 32px);
+  padding: 13px 18px;
+  position: fixed;
+  top: 18px;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+.login-toast.error {
+  background: #341018;
+  border-color: var(--red);
+}
+
+#sessionStatus.session-confirmed {
+  color: var(--green);
+  font-weight: 900;
+}
+
+#sessionStatus.session-error {
+  color: var(--red);
+  font-weight: 900;
+}
+
 label {
   color: var(--muted);
   display: grid;

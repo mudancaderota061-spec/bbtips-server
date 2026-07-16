@@ -2,6 +2,23 @@ const SCRIPT_ID = "bbtips-robo-injected-script";
 const API_BASE = "https://bbtips-server.onrender.com";
 let CHECK_TIMER = null;
 let LAST_BRIDGE_SEND = 0;
+
+function injectEarlyApiHook() {
+  if (document.getElementById("bbtips-early-api-hook")) return;
+  const mount = document.head || document.documentElement;
+  if (!mount) {
+    document.addEventListener("readystatechange", injectEarlyApiHook, { once: true });
+    return;
+  }
+  const script = document.createElement("script");
+  script.id = "bbtips-early-api-hook";
+  script.src = chrome.runtime.getURL("page-hook.js");
+  script.onload = () => script.remove();
+  script.onerror = () => script.remove();
+  mount.appendChild(script);
+}
+
+injectEarlyApiHook();
 async function bridgeGraphData(message) {
   const liga = Number(message?.liga);
   const requestId = String(message?.requestId || "");

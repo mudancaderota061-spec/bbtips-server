@@ -444,7 +444,9 @@ app.get("/api/scanner-data", requireUserOrAdmin, async (req, res) => {
     .find(Boolean) || "Horas3";
 
   const activeHours = recentHours;
-  const finalApiData = await fetchScannerApiRows(platform, activeHours);
+  // A API do BBTips bloqueia consultas feitas pelo Render. A extensao coleta
+  // dentro da sessao autenticada e envia as linhas completas para este endpoint.
+  const finalApiData = { at: Date.now(), rows: [], errors: [] };
   const apiFutureOddsByKey = new Map();
   for (const row of finalApiData.rows) {
     const rowHours = normalizeScannerHours(row.hours) || activeHours;

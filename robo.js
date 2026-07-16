@@ -760,7 +760,19 @@ function processApiText(url,text,opts={}){
     return rows;
   }catch(e){return []}
 }
+function drainCapturedApi(){
+  try{
+    const queue=Array.isArray(window.__BBTIPS_CAPTURED_API)?window.__BBTIPS_CAPTURED_API.splice(0):[];
+    queue.forEach(item=>processApiText(item?.url||"",item?.text||""));
+    return queue.length;
+  }catch(e){return 0}
+}
 function hookApi(){
+  drainCapturedApi();
+  if(!window.__BBTIPS_CAPTURE_DRAIN_LISTENER){
+    window.__BBTIPS_CAPTURE_DRAIN_LISTENER=true;
+    window.addEventListener("bbtips-api-captured",()=>drainCapturedApi());
+  }
   if(!window.__BBTIPS_FINAL_API_HOOK&&window.fetch){
     window.__BBTIPS_FINAL_API_HOOK=true;
     const orig=window.fetch;

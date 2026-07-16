@@ -18,9 +18,19 @@
     <form id="loginForm" class="login">
       <input id="loginUser" autocomplete="username" placeholder="login">
       <input id="loginPass" autocomplete="current-password" placeholder="senha" type="password">
-      <button type="submit">Entrar</button>
+      <button id="loginButton" type="submit">Entrar</button>
     </form>
+    <div id="accountStatus" class="account-status" aria-live="polite" hidden>
+      <span class="account-status-dot" aria-hidden="true"></span>
+      <div>
+        <strong id="accountStatusText">CONECTADO</strong>
+        <small>Coleta e atualizacao liberadas</small>
+      </div>
+      <button id="logoutBtn" type="button" class="logout-btn">Sair</button>
+    </div>
   </header>
+
+  <div id="loginToast" class="login-toast" role="status" aria-live="assertive" hidden></div>
 
   <main>
     <section class="book-menu" aria-label="Casas de futebol virtual">

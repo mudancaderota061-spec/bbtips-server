@@ -78,6 +78,11 @@ const els = {
   loginForm: document.querySelector("#loginForm"),
   loginUser: document.querySelector("#loginUser"),
   loginPass: document.querySelector("#loginPass"),
+  loginButton: document.querySelector("#loginButton"),
+  accountStatus: document.querySelector("#accountStatus"),
+  accountStatusText: document.querySelector("#accountStatusText"),
+  logoutBtn: document.querySelector("#logoutBtn"),
+  loginToast: document.querySelector("#loginToast"),
   platform: document.querySelector("#platform"),
   market: document.querySelector("#market"),
   overMarket: document.querySelector("#overMarket"),
@@ -120,6 +125,38 @@ const els = {
   leagueTabs: [...document.querySelectorAll("[data-league-tab]")],
   platformButtons: [...document.querySelectorAll("[data-platform-button]")]
 };
+
+let loginToastTimer = null;
+
+function showLoginToast(message, type = "success") {
+  clearTimeout(loginToastTimer);
+  els.loginToast.textContent = message;
+  els.loginToast.classList.toggle("error", type === "error");
+  els.loginToast.hidden = false;
+  loginToastTimer = setTimeout(() => {
+    els.loginToast.hidden = true;
+  }, 4200);
+}
+
+function setLoggedInUI(loggedIn, message = "") {
+  els.loginForm.hidden = loggedIn;
+  els.accountStatus.hidden = !loggedIn;
+  els.sessionStatus.classList.toggle("session-confirmed", loggedIn);
+  els.sessionStatus.classList.toggle("session-error", !loggedIn && Boolean(message));
+  if (loggedIn) {
+    const username = state.username || "usuario";
+    els.accountStatusText.textContent = `CONECTADO COMO ${username.toUpperCase()}`;
+    els.sessionStatus.textContent = `LOGIN CONFIRMADO: ${username}`;
+    return;
+  }
+  els.sessionStatus.textContent = message || "Entre com login e senha para carregar.";
+}
+
+function clearSession(message = "Sessao encerrada.") {
+  state.token = "";
+  localStorage.removeItem("virtualProToken");
+  setLoggedInUI(false, message);
+}
 
 function number(value, fallback = 0) {
   const n = Number(String(value ?? "").replace(",", "."));
@@ -970,7 +1007,9 @@ async function login(username, password) {
   state.username = username;
   localStorage.setItem("virtualProToken", state.token);
   localStorage.setItem("virtualProUser", username);
-  els.sessionStatus.textContent = `logado: ${username}`;
+  els.loginPass.value = "";
+  setLoggedInUI(true);
+  showLoginToast(`Login confirmado. Bem-vindo, ${username}.`);
 }
 
 async function loadData() {
@@ -991,6 +1030,11 @@ async function loadData() {
       headers: { Authorization: `Bearer ${state.token}` }
     });
     const data = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) {
+      clearSession("Sessao vencida. Entre novamente.");
+      showLoginToast("Sessao vencida. Faca o login novamente.", "error");
+      throw new Error(data.error || "sessao vencida");
+    }
     if (!response.ok || !data.ok) {
       throw new Error(data.error || "falha ao carregar scanner");
     }
@@ -1006,12 +1050,27 @@ async function loadData() {
 
 els.loginForm.addEventListener("submit", async event => {
   event.preventDefault();
+  els.loginButton.disabled = true;
+  els.loginButton.textContent = "Entrando...";
+  els.sessionStatus.classList.remove("session-error");
+  els.sessionStatus.textContent = "Conferindo login...";
   try {
     await login(els.loginUser.value.trim(), els.loginPass.value);
     await loadData();
   } catch (error) {
-    els.sessionStatus.textContent = `Falha no login: ${error.message}`;
+    if (state.token) clearSession(`Falha no login: ${error.message}`);
+    else setLoggedInUI(false, `Falha no login: ${error.message}`);
+    showLoginToast(`Falha no login: ${error.message}`, "error");
+  } finally {
+    els.loginButton.disabled = false;
+    els.loginButton.textContent = "Entrar";
   }
+});
+
+els.logoutBtn.addEventListener("click", () => {
+  clearSession("Voce saiu. Entre novamente quando quiser.");
+  showLoginToast("Sessao encerrada.");
+  els.loginPass.focus();
 });
 
 els.refreshBtn.addEventListener("click", async () => {
@@ -1135,11 +1194,12 @@ els.chartLeague.addEventListener("change", () => {
 setActiveMarket(localStorage.getItem("virtualProMarket") || "over25", false);
 if (state.username) els.loginUser.value = state.username;
 if (state.token) {
-  els.sessionStatus.textContent = `token salvo: ${state.username || "usuario"}`;
+  setLoggedInUI(true);
   loadData().catch(error => {
     els.dataStatus.textContent = `Erro: ${error.message}`;
   });
 } else {
+  setLoggedInUI(false);
   render();
 }
 
