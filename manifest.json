@@ -3,7 +3,11 @@
   "name": "BBTips Robô",
   "version": "1.0.85",
   "description": "Injeta o robô BBTips somente após ativação da licença.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://* http://*"
   },
@@ -42,13 +46,19 @@
         "*://*.caramelotips.com.br/*",
         "*://caramelotips.com.br/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js",
+        "sonda-th.js"
+      ],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["robot.js", "page-hook.js"],
+      "resources": [
+        "robot.js",
+        "page-hook.js"
+      ],
       "matches": [
         "*://*.bbtips.com.br/*",
         "*://bbtips.com.br/*",
