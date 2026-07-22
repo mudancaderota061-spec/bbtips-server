@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TH Live</title>
+<style>
+:root{
+  --fundo:#0a0e17;
+  --painel:#111827;
+  --borda:#1f2b3e;
+  --texto:#e6edf7;
+  --apagado:#7d8ba1;
+  --green:#12b76a;
+  --red:#e5484d;
+  --ambar:#f5a524;
+  --azul:#3b82f6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--fundo);color:var(--texto);
+  font:14px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:40px;
+}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- topo ---------- */
+header{
+  position:sticky;top:0;z-index:20;background:rgba(10,14,23,.96);
+  border-bottom:1px solid var(--borda);backdrop-filter:blur(8px);
+}
+.faixa{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:12px 16px}
+.marca{font-weight:700;letter-spacing:.14em;font-size:12px;color:var(--apagado)}
+.marca b{color:var(--texto);letter-spacing:.06em;font-size:15px;display:block}
+
+.grupo{display:flex;flex-direction:column;gap:5px}
+.rotulo{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--apagado)}
+.casas{display:flex;gap:6px;flex-wrap:wrap}
+.casa{
+  background:var(--painel);border:1px solid var(--borda);color:var(--apagado);
+  padding:7px 13px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.casa:hover{color:var(--texto);border-color:#33445e}
+.casa[aria-pressed="true"]{background:#16233a;border-color:var(--azul);color:#fff}
+.casa:focus-visible,select:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+
+select{
+  background:var(--painel);border:1px solid var(--borda);color:var(--texto);
+  padding:7px 10px;border-radius:7px;font-size:13px;min-width:140px;
+}
+.direita{margin-left:auto;display:flex;align-items:center;gap:12px}
+.pulso{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)}
+.pulso.frio{background:var(--apagado)}
+.aviso{font-size:12px;color:var(--apagado)}
+
+/* ---------- placar ---------- */
+.placar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--borda);border-bottom:1px solid var(--borda)}
+.cartao{background:var(--fundo);padding:12px 16px}
+.cartao .t{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--apagado)}
+.cartao .v{font-size:26px;font-weight:700;line-height:1.2;margin-top:2px}
+.cartao .s{font-size:11px;color:var(--apagado)}
+.v.verde{color:var(--green)} .v.vermelho{color:var(--red)} .v.ambar{color:var(--ambar)}
+
+/* ---------- janelas ---------- */
+.janelas{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px 16px}
+.janela{background:var(--painel);border:1px solid var(--borda);border-radius:9px;padding:11px 13px}
+.janela h3{font-size:11px;letter-spacing:.08em;color:var(--apagado);text-transform:uppercase;font-weight:600}
+.janela .linha{display:flex;justify-content:space-between;align-items:baseline;margin-top:7px;font-size:12px}
+.janela .linha span:first-child{color:var(--apagado)}
+.barra{height:4px;border-radius:2px;background:#1b2435;margin-top:9px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--green);transition:width .3s}
+
+/* ---------- mosaico ---------- */
+.secao{padding:4px 16px 0}
+.secao h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--apagado);margin-bottom:9px}
+.mosaico{display:flex;flex-direction:column;gap:5px}
+.hora{display:flex;gap:7px;align-items:flex-start}
+.hora .h{
+  flex:0 0 34px;font-size:11px;color:var(--apagado);padding-top:5px;text-align:right;
+}
+.celulas{display:flex;flex-wrap:wrap;gap:3px;flex:1}
+.cel{
+  width:24px;height:24px;border-radius:4px;border:1px solid transparent;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;cursor:default;color:rgba(255,255,255,.85);
+}
+.cel.g{background:rgba(18,183,106,.22);border-color:rgba(18,183,106,.5)}
+.cel.r{background:rgba(229,72,77,.18);border-color:rgba(229,72,77,.45)}
+.cel.n{background:#161f2f;border-color:var(--borda);color:var(--apagado)}
+.cel.ultimo{box-shadow:0 0 0 2px var(--ambar)}
+
+/* ---------- estados ---------- */
+.recado{padding:44px 16px;text-align:center;color:var(--apagado)}
+.recado b{display:block;color:var(--texto);font-size:16px;margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:640px){
+  .cel{width:20px;height:20px;font-size:9px}
+  .cartao .v{font-size:21px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="faixa">
+    <div class="marca">TH<b>LIVE</b></div>
+
+    <div class="grupo">
+      <span class="rotulo" id="rot-casa">Casa</span>
+      <div class="casas" role="group" aria-labelledby="rot-casa" id="casas"></div>
+    </div>
+
+    <div class="grupo">
+      <label class="rotulo" for="liga">Liga</label>
+      <select id="liga"></select>
+    </div>
+
+    <div class="grupo">
+      <label class="rotulo" for="mercado">Mercado</label>
+      <select id="mercado">
+        <optgroup label="Gols">
+          <option value="o05">Over 0.5</option>
+          <option value="o15">Over 1.5</option>
+          <option value="o25" selected>Over 2.5</option>
+          <option value="o35">Over 3.5</option>
+          <option value="o45">Over 4.5</option>
+        </optgroup>
+        <optgroup label="Under">
+          <option value="u15">Under 1.5</option>
+          <option value="u25">Under 2.5</option>
+          <option value="u35">Under 3.5</option>
+        </optgroup>
+        <optgroup label="Ambas">
+          <option value="btts">Ambas Marcam</option>
+          <option value="nbtts">Ambas Nao Marcam</option>
+        </optgroup>
+        <optgroup label="1o tempo">
+          <option value="htO05">HT Over 0.5</option>
+          <option value="htO15">HT Over 1.5</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="direita">
+      <span class="pulso frio" id="pulso"></span>
+      <span class="aviso" id="aviso">carregando</span>
+    </div>
+  </div>
+</header>
+
+<div class="placar" id="placar"></div>
+<div class="janelas" id="janelas"></div>
+
+<div class="secao">
+  <h2 id="titulo-mosaico">Mosaico</h2>
+  <div class="mosaico" id="mosaico"></div>
+</div>
+
+<div class="recado" id="recado" hidden></div>
+
+<script>
+'use strict';
+
+const API = '';                 // mesmo host
+const RECARGA_MS = 30000;
+const JANELAS = [120, 240, 480, 960];
+
+const CASAS = [
+  { id:'betano',      nome:'Betano' },
+  { id:'bet365',      nome:'Bet365' },
+  { id:'kiron',       nome:'Kiron' },
+  { id:'sportingbet', nome:'Sportingbet' },
+];
+
+const estado = {
+  casa: localStorage.getItem('th_casa') || 'betano',
+  liga: localStorage.getItem('th_liga') || '1',
+  mercado: localStorage.getItem('th_mercado') || 'o25',
+  jogos: [],
+  inventario: [],
+};
+
+const $ = (s) => document.querySelector(s);
+const el = { casas:$('#casas'), liga:$('#liga'), mercado:$('#mercado'),
+             placar:$('#placar'), janelas:$('#janelas'), mosaico:$('#mosaico'),
+             aviso:$('#aviso'), pulso:$('#pulso'), recado:$('#recado'),
+             tituloMosaico:$('#titulo-mosaico') };
+
+/* ---------- avaliacao de mercado ---------- */
+// devolve true (green), false (red) ou null (sem dado)
+function avaliar(j, mercado) {
+  const g = j.gols, ht = j.htGols;
+  const m = j.mercados || {};
+  switch (mercado) {
+    case 'o05': case 'o15': case 'o25': case 'o35': case 'o45':
+      if (m[mercado] != null) return m[mercado];
+      if (g == null) return null;
+      return g > parseFloat(mercado.slice(1,2) + '.' + mercado.slice(2));
+    case 'u15': return g == null ? null : g < 1.5;
+    case 'u25': return g == null ? null : g < 2.5;
+    case 'u35': return g == null ? null : g < 3.5;
+    case 'btts': return m.btts != null ? m.btts
+                 : (j.golsA == null || j.golsB == null ? null : j.golsA > 0 && j.golsB > 0);
+    case 'nbtts': {
+      const b = m.btts != null ? m.btts
+              : (j.golsA == null || j.golsB == null ? null : j.golsA > 0 && j.golsB > 0);
+      return b == null ? null : !b;
+    }
+    case 'htO05': return m.htO05 != null ? m.htO05 : (ht == null ? null : ht > 0.5);
+    case 'htO15': return m.htO15 != null ? m.htO15 : (ht == null ? null : ht > 1.5);
+    default: return null;
+  }
+}
+
+const nomeMercado = () => el.mercado.options[el.mercado.selectedIndex].text;
+
+/* ---------- estatistica ---------- */
+function resumo(lista) {
+  const r = lista.map(j => avaliar(j, estado.mercado)).filter(v => v != null);
+  const total = r.length;
+  const greens = r.filter(Boolean).length;
+  let atual = 0;
+  for (let i = r.length - 1; i >= 0 && r[i] === false; i--) atual++;
+  let maior = 0, corrente = 0;
+  for (const v of r) { if (v === false) { corrente++; maior = Math.max(maior, corrente); } else corrente = 0; }
+  return { total, greens, pct: total ? (greens / total) * 100 : 0, atual, maior };
+}
+
+/* ---------- desenho ---------- */
+function pintarPlacar() {
+  const r = resumo(estado.jogos);
+  const ultimo = estado.jogos[estado.jogos.length - 1];
+  const cartoes = [
+    { t:'Jogos', v:r.total, s:`${estado.casa} · liga ${estado.liga}`, c:'' },
+    { t:'Green', v:`${r.pct.toFixed(1)}%`, s:`${r.greens} de ${r.total}`, c:r.pct >= 50 ? 'verde' : 'vermelho' },
+    { t:'Red seguidos agora', v:r.atual, s:'desde o ultimo green', c:r.atual >= 5 ? 'ambar' : '' },
+    { t:'Maior seq. red', v:r.maior, s:'no periodo carregado', c:'' },
+    { t:'Ultimo jogo', v:ultimo ? (ultimo.ft ?? '—') : '—',
+      s:ultimo ? `${ultimo.horario ?? ''} ${ultimo.siglaA ?? ''}-${ultimo.siglaB ?? ''}` : '', c:'' },
+  ];
+  el.placar.innerHTML = cartoes.map(c => `
+    <div class="cartao">
+      <div class="t">${c.t}</div>
+      <div class="v mono ${c.c}">${c.v}</div>
+      <div class="s">${c.s}</div>
+    </div>`).join('');
+}
+
+function pintarJanelas() {
+  el.janelas.innerHTML = JANELAS.map(n => {
+    const r = resumo(estado.jogos.slice(-n));
+    const falta = r.total < n;
+    return `
+      <div class="janela">
+        <h3>Ultimos ${n}${falta ? ` (so ${r.total})` : ''}</h3>
+        <div class="linha"><span>Green</span><b class="mono">${r.pct.toFixed(1)}%</b></div>
+        <div class="linha"><span>Maior seq. red</span><b class="mono">${r.maior}</b></div>
+        <div class="barra"><i style="width:${Math.min(100, r.pct).toFixed(1)}%"></i></div>
+      </div>`;
+  }).join('');
+}
+
+function pintarMosaico() {
+  el.tituloMosaico.textContent = `Mosaico · ${nomeMercado()}`;
+  if (!estado.jogos.length) { el.mosaico.innerHTML = ''; return; }
+
+  const porHora = new Map();
+  for (const j of estado.jogos) {
+    const h = (j.horario || '').split('.')[0] || '--';
+    if (!porHora.has(h)) porHora.set(h, []);
+    porHora.get(h).push(j);
+  }
+  const ultimoId = estado.jogos[estado.jogos.length - 1]?.id;
+
+  const partes = [];
+  for (const [h, jogos] of porHora) {
+    const celulas = jogos.map(j => {
+      const v = avaliar(j, estado.mercado);
+      const cls = v === true ? 'g' : v === false ? 'r' : 'n';
+      const marca = j.id === ultimoId ? ' ultimo' : '';
+      const titulo = `${j.horario ?? ''} ${j.timeA ?? ''} ${j.ft ?? '—'} ${j.timeB ?? ''} · HT ${j.ht ?? '—'}`;
+      return `<div class="cel ${cls}${marca}" title="${titulo.replace(/"/g,'')}">${j.gols ?? ''}</div>`;
+    }).join('');
+    partes.push(`<div class="hora"><div class="h mono">${h}h</div><div class="celulas">${celulas}</div></div>`);
+  }
+  el.mosaico.innerHTML = partes.join('');
+}
+
+function pintarCasas() {
+  el.casas.innerHTML = CASAS.map(c => {
+    const tem = estado.inventario.some(i => i.casa === c.id);
+    return `<button class="casa" data-casa="${c.id}" aria-pressed="${c.id === estado.casa}"
+             ${tem ? '' : 'title="sem dados ainda"'}>${c.nome}${tem ? '' : ' ·'}</button>`;
+  }).join('');
+}
+
+function pintarLigas() {
+  const ligas = [...new Set(estado.inventario
+    .filter(i => i.casa === estado.casa).map(i => String(i.liga)))].sort((a,b)=>a-b);
+  const lista = ligas.length ? ligas : ['1'];
+  if (!lista.includes(estado.liga)) estado.liga = lista[0];
+  el.liga.innerHTML = lista.map(l => {
+    const it = estado.inventario.find(i => i.casa === estado.casa && String(i.liga) === l);
+    return `<option value="${l}" ${l === estado.liga ? 'selected' : ''}>Liga ${l}${it ? ` (${it.total})` : ''}</option>`;
+  }).join('');
+}
+
+function mostrarRecado(titulo, texto) {
+  el.recado.hidden = false;
+  el.recado.innerHTML = `<b>${titulo}</b>${texto}`;
+}
+
+/* ---------- dados ---------- */
+async function carregarInventario() {
+  try {
+    const r = await fetch(`${API}/casas`, { cache:'no-store' });
+    const d = await r.json();
+    estado.inventario = (d.itens || []).map(i => ({ ...i, casa:String(i.casa).toLowerCase() }));
+  } catch (e) { estado.inventario = []; }
+  pintarCasas();
+  pintarLigas();
+}
+
+async function carregarJogos() {
+  el.pulso.classList.add('frio');
+  el.aviso.textContent = 'atualizando';
+  try {
+    const url = `${API}/jogos-th?casa=${encodeURIComponent(estado.casa)}&liga=${encodeURIComponent(estado.liga)}&limite=960`;
+    const r = await fetch(url, { cache:'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    estado.jogos = d.jogos || [];
+
+    if (!estado.jogos.length) {
+      el.placar.innerHTML = ''; el.janelas.innerHTML = ''; el.mosaico.innerHTML = '';
+      mostrarRecado('Nenhum jogo ainda',
+        `Abra o thtips na ${CASAS.find(c=>c.id===estado.casa)?.nome ?? estado.casa} e deixe a aba aberta. A coleta aparece aqui em instantes.`);
+    } else {
+      el.recado.hidden = true;
+      pintarPlacar(); pintarJanelas(); pintarMosaico();
+    }
+    el.pulso.classList.remove('frio');
+    el.aviso.textContent = `${estado.jogos.length} jogos · ${new Date().toLocaleTimeString('pt-BR')}`;
+  } catch (e) {
+    el.aviso.textContent = 'sem conexao com o servidor';
+    mostrarRecado('Nao consegui buscar os dados', `O servidor respondeu: ${e.message}. Recarregue em alguns segundos.`);
+  }
+}
+
+function repintar() { if (estado.jogos.length) { pintarPlacar(); pintarJanelas(); pintarMosaico(); } }
+
+/* ---------- eventos ---------- */
+el.casas.addEventListener('click', (ev) => {
+  const b = ev.target.closest('.casa'); if (!b) return;
+  estado.casa = b.dataset.casa;
+  localStorage.setItem('th_casa', estado.casa);
+  pintarCasas(); pintarLigas(); carregarJogos();
+});
+el.liga.addEventListener('change', () => {
+  estado.liga = el.liga.value;
+  localStorage.setItem('th_liga', estado.liga);
+  carregarJogos();
+});
+el.mercado.addEventListener('change', () => {
+  estado.mercado = el.mercado.value;
+  localStorage.setItem('th_mercado', estado.mercado);
+  repintar();
+});
+
+/* ---------- inicio ---------- */
+el.mercado.value = estado.mercado;
+(async () => {
+  await carregarInventario();
+  await carregarJogos();
+  setInterval(async () => { await carregarInventario(); await carregarJogos(); }, RECARGA_MS);
+})();
+</script>
+</body>
+</html>
