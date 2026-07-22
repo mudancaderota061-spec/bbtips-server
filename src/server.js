@@ -37,6 +37,9 @@ app.use(cors({ origin: true, methods: ["GET", "POST", "PATCH", "DELETE", "OPTION
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static("public"));
 
+import { montarIngest } from "./ingest.js";
+await montarIngest(app);
+
 function tokenFor(payload) {
   const body = Buffer.from(JSON.stringify({
     ...payload,
