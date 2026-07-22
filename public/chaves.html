@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMD Live 2 · Chaves</title>
+<style>
+:root{--fundo:#0a0e17;--painel:#111827;--borda:#1f2b3e;--texto:#e6edf7;--apagado:#7d8ba1;--azul:#3b82f6;--verde:#12b76a;--red:#e5484d;--ambar:#f5a524}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--fundo);color:var(--texto);font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;padding:20px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.topo{display:flex;align-items:baseline;gap:12px;margin-bottom:20px}
+.marca{font-weight:700;letter-spacing:.14em;font-size:12px;color:var(--apagado)}
+.marca b{color:var(--texto);font-size:18px;letter-spacing:.06em}
+.wrap{max-width:760px;margin:0 auto}
+.painel{background:var(--painel);border:1px solid var(--borda);border-radius:12px;padding:18px;margin-bottom:16px}
+.painel h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--apagado);margin-bottom:14px}
+.campos{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.campo{display:flex;flex-direction:column;gap:5px}
+.campo label{font-size:11px;color:var(--apagado)}
+input,button{font:inherit}
+input{background:var(--fundo);border:1px solid var(--borda);color:var(--texto);padding:9px 12px;border-radius:8px}
+input:focus{outline:2px solid var(--azul);outline-offset:1px}
+button{background:var(--azul);border:0;color:#fff;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer}
+button:hover{background:#2f6fd6}
+button.sec{background:transparent;border:1px solid var(--borda);color:var(--texto)}
+button.sec:hover{border-color:#33445e;background:#16233a}
+button.perigo{background:transparent;border:1px solid var(--red);color:var(--red)}
+.gerada{margin-top:14px;padding:14px;border:1px dashed var(--verde);border-radius:10px;display:none}
+.gerada .k{font-size:24px;font-weight:700;letter-spacing:.1em;color:var(--verde)}
+.gerada small{color:var(--apagado)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--borda)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--apagado);font-weight:600}
+.pill{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+.pill.on{background:rgba(18,183,106,.18);color:var(--verde)}
+.pill.off{background:rgba(229,72,77,.16);color:var(--red)}
+.msg{margin-top:10px;font-size:13px;min-height:18px}
+.msg.erro{color:var(--red)}.msg.ok{color:var(--verde)}
+.login{max-width:340px;margin:60px auto;text-align:center}
+.acao{cursor:pointer;color:var(--azul);font-size:12px}
+.copiar{cursor:pointer;color:var(--apagado);font-size:12px;margin-left:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo"><span class="marca">AMD<b>LIVE 2</b></span><span style="color:var(--apagado)">painel de chaves</span></div>
+
+  <!-- login admin -->
+  <div id="login" class="painel login">
+    <h2>Entrar como admin</h2>
+    <div class="campo" style="text-align:left">
+      <label>Senha admin</label>
+      <input id="senhaAdmin" type="password" placeholder="senha" style="width:100%">
+    </div>
+    <button id="btnLogin" style="width:100%;margin-top:12px">Entrar</button>
+    <div class="msg" id="msgLogin"></div>
+  </div>
+
+  <!-- painel principal -->
+  <div id="app" style="display:none">
+    <div class="painel">
+      <h2>Gerar nova chave</h2>
+      <div class="campos">
+        <div class="campo"><label>Nome do amigo (opcional)</label><input id="dono" placeholder="ex: Joao"></div>
+        <div class="campo"><label>Validade em dias (0 = sem prazo)</label><input id="dias" type="number" value="0" min="0" style="width:90px"></div>
+        <button id="btnGerar">Gerar chave</button>
+      </div>
+      <div class="gerada" id="gerada">
+        <div class="k mono" id="chaveGerada"></div>
+        <small>Copie e mande pro seu amigo. Ele entra em <b>/entrar.html</b> <span class="copiar" id="copiar">copiar</span></small>
+      </div>
+      <div class="msg" id="msgGerar"></div>
+    </div>
+
+    <div class="painel">
+      <h2>Chaves ativas</h2>
+      <table><thead><tr><th>Chave</th><th>Dono</th><th>Status</th><th>Usos</th><th>Ultimo uso</th><th></th></tr></thead>
+        <tbody id="tabela"></tbody></table>
+      <div class="msg" id="msgLista"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+let ADMIN = sessionStorage.getItem('th_admin') || '';
+
+const $ = s => document.querySelector(s);
+const login = $('#login'), app = $('#app');
+
+function mostra(el, t, tipo){ el.textContent = t; el.className = 'msg ' + (tipo||''); }
+
+async function api(rota, corpo){
+  const r = await fetch(rota, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'x-admin': ADMIN },
+    body: JSON.stringify(corpo || {}),
+  });
+  return r.json();
+}
+
+async function testarAdmin(){
+  const r = await fetch('/api/th/listar', { headers:{ 'x-admin': ADMIN } });
+  return r.ok;
+}
+
+$('#btnLogin').addEventListener('click', async () => {
+  ADMIN = $('#senhaAdmin').value.trim();
+  if (await testarAdmin()){
+    sessionStorage.setItem('th_admin', ADMIN);
+    login.style.display='none'; app.style.display='block'; listar();
+  } else {
+    mostra($('#msgLogin'), 'Senha incorreta.', 'erro');
+  }
+});
+
+$('#btnGerar').addEventListener('click', async () => {
+  const dono = $('#dono').value.trim();
+  const dias = Number($('#dias').value) || 0;
+  const d = await api('/api/th/gerar', { dono, dias });
+  if (d.ok){
+    $('#chaveGerada').textContent = d.chave;
+    $('#gerada').style.display = 'block';
+    $('#gerada').dataset.chave = d.chave;
+    mostra($('#msgGerar'), '', '');
+    $('#dono').value = '';
+    listar();
+  } else {
+    mostra($('#msgGerar'), d.error || 'falha', 'erro');
+  }
+});
+
+$('#copiar').addEventListener('click', () => {
+  const c = $('#gerada').dataset.chave;
+  navigator.clipboard?.writeText(c);
+  $('#copiar').textContent = 'copiado';
+  setTimeout(()=>$('#copiar').textContent='copiar', 1500);
+});
+
+async function listar(){
+  const r = await fetch('/api/th/listar', { headers:{ 'x-admin': ADMIN } });
+  const d = await r.json();
+  if (!d.ok){ mostra($('#msgLista'), d.error||'falha', 'erro'); return; }
+  $('#tabela').innerHTML = d.chaves.map(c => `
+    <tr>
+      <td class="mono">${c.chave}</td>
+      <td>${c.dono || '—'}</td>
+      <td><span class="pill ${c.ativa?'on':'off'}">${c.ativa?'ativa':'revogada'}</span></td>
+      <td>${c.usos||0}</td>
+      <td>${c.ultimo_uso ? new Date(c.ultimo_uso).toLocaleString('pt-BR') : '—'}</td>
+      <td><span class="acao" data-chave="${c.chave}" data-ativa="${c.ativa}">${c.ativa?'revogar':'reativar'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="color:var(--apagado)">Nenhuma chave ainda.</td></tr>';
+
+  $('#tabela').querySelectorAll('.acao').forEach(a => {
+    a.addEventListener('click', async () => {
+      await api('/api/th/revogar', { chave:a.dataset.chave, ativa: a.dataset.ativa!=='true' });
+      listar();
+    });
+  });
+}
+
+// auto-login se ja tem senha guardada
+(async () => {
+  if (ADMIN && await testarAdmin()){ login.style.display='none'; app.style.display='block'; listar(); }
+})();
+</script>
+</body>
+</html>

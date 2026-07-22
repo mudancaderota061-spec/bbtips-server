@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMD Live 2 · Entrar</title>
+<style>
+:root{--fundo:#0a0e17;--painel:#111827;--borda:#1f2b3e;--texto:#e6edf7;--apagado:#7d8ba1;--azul:#3b82f6;--verde:#12b76a;--red:#e5484d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--fundo);color:var(--texto);font:15px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.caixa{width:100%;max-width:380px;background:var(--painel);border:1px solid var(--borda);
+  border-radius:16px;padding:32px 28px}
+.marca{font-weight:700;letter-spacing:.14em;font-size:12px;color:var(--apagado);margin-bottom:4px}
+.marca b{color:var(--texto);letter-spacing:.06em;font-size:22px;display:block;margin-top:2px}
+h1{font-size:16px;font-weight:600;margin:20px 0 6px}
+p.sub{color:var(--apagado);font-size:13px;margin-bottom:22px}
+label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--apagado);margin-bottom:8px}
+input{width:100%;background:var(--fundo);border:1px solid var(--borda);color:var(--texto);
+  padding:14px 16px;border-radius:10px;font-size:18px;letter-spacing:.08em;text-align:center;
+  font-family:ui-monospace,Menlo,Consolas,monospace;text-transform:uppercase}
+input:focus{outline:2px solid var(--azul);outline-offset:2px}
+button{width:100%;margin-top:16px;background:var(--azul);border:0;color:#fff;
+  padding:14px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+button:hover{background:#2f6fd6}
+button:disabled{opacity:.6;cursor:default}
+.msg{margin-top:14px;font-size:13px;text-align:center;min-height:18px}
+.msg.erro{color:var(--red)}
+.msg.ok{color:var(--verde)}
+.rodape{margin-top:20px;font-size:12px;color:var(--apagado);text-align:center}
+</style>
+</head>
+<body>
+<div class="caixa">
+  <div class="marca">AMD<b>LIVE 2</b></div>
+  <h1>Entrar com chave de acesso</h1>
+  <p class="sub">Cole a chave que voce recebeu para acessar o painel.</p>
+
+  <label for="chave">Sua chave</label>
+  <input id="chave" placeholder="TH-XXXX-XXXX" autocomplete="off" maxlength="14" inputmode="text">
+  <button id="btn">Entrar</button>
+  <div class="msg" id="msg"></div>
+
+  <div class="rodape">Cada chave e pessoal. Nao compartilhe.</div>
+</div>
+
+<script>
+'use strict';
+const input = document.getElementById('chave');
+const btn = document.getElementById('btn');
+const msg = document.getElementById('msg');
+
+// se ja tem token valido, vai direto
+if (localStorage.getItem('virtualProToken')) {
+  location.href = '/virtual.html';
+}
+
+function mostra(t, tipo) { msg.textContent = t; msg.className = 'msg ' + (tipo || ''); }
+
+async function entrar() {
+  const chave = input.value.trim().toUpperCase();
+  if (!chave) { mostra('Digite a chave.', 'erro'); return; }
+  btn.disabled = true; mostra('Verificando...', '');
+  try {
+    const r = await fetch('/api/th/entrar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chave }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || 'chave invalida');
+    // guarda no MESMO lugar que a virtual.html usa
+    localStorage.setItem('virtualProToken', d.token);
+    mostra('Entrando...', 'ok');
+    setTimeout(() => location.href = '/virtual.html', 400);
+  } catch (e) {
+    mostra(e.message, 'erro');
+    btn.disabled = false;
+  }
+}
+
+btn.addEventListener('click', entrar);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+input.focus();
+</script>
+</body>
+</html>
