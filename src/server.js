@@ -40,6 +40,11 @@ app.use(express.static("public"));
 import { montarIngest } from "./ingest.js";
 await montarIngest(app);
 
+import { montarPonteTh } from "./ponte-th.js";
+montarPonteTh(app);
+import { montarChaves } from "./chaves.js";
+await montarChaves(app);
+
 function tokenFor(payload) {
   const body = Buffer.from(JSON.stringify({
     ...payload,
