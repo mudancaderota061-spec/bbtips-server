@@ -1,0 +1,16 @@
+{
+  "name": "amd-live-2",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node prepara.js",
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.21.0",
+    "web-push": "^3.6.7"
+  }
+}
