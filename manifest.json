@@ -47,17 +47,28 @@
         "*://caramelotips.com.br/*"
       ],
       "js": [
-        "content.js",
-        "sonda-th.js"
+        "content.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://*.thtips.com.br/*",
+        "*://thtips.com.br/*"
+      ],
+      "js": [
+        "sonda-th.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
         "robot.js",
-        "page-hook.js"
+        "page-hook.js",
+        "sonda-th.js"
       ],
       "matches": [
         "*://*.bbtips.com.br/*",
